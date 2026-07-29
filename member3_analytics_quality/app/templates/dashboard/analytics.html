@@ -1,0 +1,193 @@
+{% extends 'base.html' %}
+{% block title %}Analytics — {{ dataset.name }}{% endblock %}
+{% block page_title %}ANALYTICS: {{ dataset.name | upper }}{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb + actions -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <nav style="font-size:.82rem">
+    <a href="{{ url_for('dashboard.index') }}" class="text-muted text-decoration-none">Dashboard</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}" class="text-muted text-decoration-none">{{ dataset.name }}</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <span class="fw-semibold" style="color:#1c1917">Analytics</span>
+  </nav>
+  <a href="{{ url_for('dashboard.clean_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-magic me-1"></i>Clean Data</a>
+  <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-grid me-1"></i>Explorer</a>
+</div>
+
+<!-- Insights banner -->
+{% if insights %}
+<div class="section-card p-4 mb-4 reveal" style="border-left:4px solid #f97316;background:linear-gradient(90deg,#fff7ed,#fff)">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <div style="width:32px;height:32px;background:#f97316;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff">
+      <i class="bi bi-lightbulb-fill"></i>
+    </div>
+    <h6 class="fw-bold mb-0">Auto-Generated Insights</h6>
+  </div>
+  <div class="row g-2">
+    {% for insight in insights %}
+    <div class="col-md-6">
+      <div class="d-flex gap-2 align-items-start p-2 rounded-3" style="background:#fff7ed">
+        <i class="bi bi-arrow-right-circle-fill mt-1 flex-shrink-0" style="color:#f97316;font-size:.85rem"></i>
+        <span style="font-size:.875rem">{{ insight }}</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- KPI Cards -->
+{% if kpis %}
+<div class="section-card p-4 mb-4 reveal">
+  <h6 class="fw-bold mb-3"><i class="bi bi-speedometer2 me-2" style="color:#f97316"></i>Column KPIs</h6>
+  <div class="row g-3">
+    {% for k in kpis %}
+    <div class="col-md-4 col-lg-2">
+      <div class="p-3 rounded-3 h-100" style="background:#fafaf9;border:1px solid #f0ede8">
+        <div class="fw-bold small text-truncate mb-2 pb-2" style="border-bottom:2px solid #f97316" title="{{ k.label }}">{{ k.label }}</div>
+        <div class="row g-1">
+          {% for stat_label, stat_val in [('MEAN', k.mean), ('STD', k.std), ('MIN', k.min), ('MAX', k.max)] %}
+          <div class="col-6 text-center">
+            <div style="font-size:.6rem;color:#a8a29e;text-transform:uppercase">{{ stat_label }}</div>
+            <div class="fw-semibold" style="font-size:.8rem">{{ stat_val }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if k.nulls > 0 %}<div class="mt-2 text-center"><span class="badge bg-danger" style="font-size:.6rem">{{ k.nulls }} nulls</span></div>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Distributions -->
+{% if dist_charts %}
+<div class="section-card p-4 mb-4 reveal">
+  <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2" style="color:#f97316"></i>Distributions</h6>
+  <div class="row g-3">
+    {% for c in dist_charts %}
+    <div class="col-md-6">
+      <div class="rounded-3 overflow-hidden" style="background:#1c1917">
+        <div id="dist-{{ loop.index }}" style="height:280px"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Category Charts -->
+{% if cat_charts %}
+<div class="section-card p-4 mb-4 reveal">
+  <h6 class="fw-bold mb-3"><i class="bi bi-tags me-2" style="color:#f97316"></i>Top Category Values</h6>
+  <div class="row g-3">
+    {% for c in cat_charts %}
+    <div class="col-md-4">
+      <div class="rounded-3 overflow-hidden" style="background:#1c1917">
+        <div id="cat-{{ loop.index }}" style="height:280px"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Heatmap + Trend -->
+<div class="row g-4 mb-4 stagger">
+  {% if corr_json %}
+  <div class="{{ 'col-md-7' if trend_json else 'col-12' }}">
+    <div class="section-card p-4 h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-grid me-2" style="color:#f97316"></i>Correlation Heatmap</h6>
+      <div class="rounded-3 overflow-hidden" style="background:#1c1917">
+        <div id="corr-chart" style="height:380px"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% if trend_json %}
+  <div class="{{ 'col-md-5' if corr_json else 'col-12' }}">
+    <div class="section-card p-4 h-100">
+      <h6 class="fw-bold mb-3"><i class="bi bi-graph-up-arrow me-2" style="color:#16a34a"></i>Time Trend</h6>
+      <div class="rounded-3 overflow-hidden" style="background:#1c1917">
+        <div id="trend-chart" style="height:380px"></div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Skewness & Outliers -->
+<div class="row g-4 mb-4 stagger">
+  <div class="col-md-6">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-activity" style="color:#f97316"></i>
+        </div>
+        <h6 class="fw-bold mb-0">Skewness Analysis</h6>
+      </div>
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Column</th><th>Skew</th><th>Distribution</th></tr></thead>
+        <tbody>
+          {% for s in skew_data %}
+          <tr>
+            <td class="small fw-semibold">{{ s.col }}</td>
+            <td class="small">{{ s.skew }}</td>
+            <td>
+              <span class="badge rounded-pill {{ 'bg-warning text-dark' if 'skewed' in s.label else 'bg-success' }}" style="font-size:.65rem">
+                {{ s.label }}
+              </span>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#fef2f2;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-exclamation-diamond" style="color:#dc3545"></i>
+        </div>
+        <h6 class="fw-bold mb-0">Outlier Detection (IQR)</h6>
+      </div>
+      <table class="table table-sm table-hover mb-0">
+        <thead><tr><th>Column</th><th>Outliers</th><th>Severity</th></tr></thead>
+        <tbody>
+          {% for o in outlier_data %}
+          <tr>
+            <td class="small fw-semibold">{{ o.col }}</td>
+            <td class="small {{ 'text-danger fw-bold' if o.outliers > 0 else 'text-success' }}">{{ o.outliers }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="progress flex-grow-1" style="height:6px;background:#f0ede8">
+                  <div class="progress-bar" style="width:{{ [o.pct,100]|min }}%;background:{% if o.pct > 10 %}#dc3545{% elif o.pct > 3 %}#f97316{% else %}#16a34a{% endif %}"></div>
+                </div>
+                <span class="small text-muted" style="min-width:35px">{{ o.pct }}%</span>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  const cfg = {responsive: true, displayModeBar: false};
+  {% for c in dist_charts %}
+  Plotly.newPlot('dist-{{ loop.index }}', {{ c.json | safe }}.data, {{ c.json | safe }}.layout, cfg);
+  {% endfor %}
+  {% for c in cat_charts %}
+  Plotly.newPlot('cat-{{ loop.index }}', {{ c.json | safe }}.data, {{ c.json | safe }}.layout, cfg);
+  {% endfor %}
+  {% if corr_json %}Plotly.newPlot('corr-chart', {{ corr_json | safe }}.data, {{ corr_json | safe }}.layout, cfg);{% endif %}
+  {% if trend_json %}Plotly.newPlot('trend-chart', {{ trend_json | safe }}.data, {{ trend_json | safe }}.layout, cfg);{% endif %}
+</script>
+{% endblock %}
