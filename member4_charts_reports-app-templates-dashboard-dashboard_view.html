@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}Live Dashboard{% endblock %}
+{% block page_title %}LIVE DASHBOARD{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 reveal">
+  <div>
+    <h5 class="fw-bold mb-1">Live Dashboard</h5>
+    <p class="text-muted small mb-0">{{ charts|length }} chart{{ 's' if charts|length != 1 }} displayed
+      <span class="ms-2 badge rounded-pill" style="background:#f0fdf4;color:#16a34a;font-size:.68rem">
+        <i class="bi bi-circle-fill pulse-dot me-1" style="font-size:.45rem"></i>Auto-refresh 30s
+      </span>
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap align-items-center">
+    <!-- Dataset filter -->
+    <form method="GET" class="d-flex gap-2 align-items-center">
+      <select name="dataset_id" class="form-select form-select-sm" style="min-width:160px" onchange="this.form.submit()">
+        <option value="">All Datasets</option>
+        {% for ds in datasets %}
+        <option value="{{ ds.id }}" {{ 'selected' if active_dataset_id == ds.id }}>{{ ds.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    <a href="{{ url_for('dashboard.reports') }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-file-earmark-bar-graph me-1"></i>Reports
+    </a>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-sm btn-accent">
+      <i class="bi bi-speedometer2 me-1"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+{% if charts %}
+<!-- Chart grid -->
+<div class="row g-4" id="chart-grid">
+  {% for c in charts %}
+  <div class="col-md-6 reveal">
+    <div class="section-card overflow-hidden h-100">
+      <div class="px-3 pt-3 pb-2 d-flex align-items-center justify-content-between" style="border-bottom:1px solid #f0ede8">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:30px;height:30px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#f97316;font-size:.85rem">
+            <i class="bi bi-{% if c.chart_type == 'bar' %}bar-chart{% elif c.chart_type == 'line' %}graph-up{% elif c.chart_type == 'scatter' %}diagram-3{% elif c.chart_type == 'pie' %}pie-chart{% elif c.chart_type == 'heatmap' %}grid{% else %}bar-chart-fill{% endif %}"></i>
+          </div>
+          <div>
+            <div class="fw-semibold" style="font-size:.85rem">{{ c.title }}</div>
+            <div class="text-muted" style="font-size:.68rem">{{ c.created_at.strftime('%d %b %Y · %H:%M') }}</div>
+          </div>
+        </div>
+        <div class="d-flex gap-1">
+          <span class="badge rounded-pill" style="background:#fff7ed;color:#f97316;font-size:.62rem">{{ c.chart_type }}</span>
+          <a href="{{ url_for('dashboard.view_report', report_id=c.id) }}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:.72rem">
+            <i class="bi bi-arrows-fullscreen"></i>
+          </a>
+        </div>
+      </div>
+      <div style="background:#1c1917">
+        <div id="chart-{{ c.id }}" style="height:300px"></div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="section-card p-5 text-center reveal">
+  <div style="width:72px;height:72px;background:#fff7ed;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:2rem;color:#f97316">
+    <i class="bi bi-bar-chart"></i>
+  </div>
+  <h5 class="fw-bold mb-1">No charts yet</h5>
+  <p class="text-muted mb-3">Build charts from your datasets to see them here.</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-accent"><i class="bi bi-arrow-left me-1"></i>Go to Dashboard</a>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+const charts = [
+  {% for c in charts %}
+  { id: {{ c.id }}, data: {{ c.chart_json | safe }} },
+  {% endfor %}
+];
+
+const cfg = { responsive: true, displayModeBar: false };
+charts.forEach(c => {
+  Plotly.newPlot('chart-' + c.id, c.data.data, c.data.layout, cfg);
+});
+
+// Auto-refresh KPI counts every 30s
+setInterval(() => {
+  fetch('{{ url_for("dashboard.api_live_stats") }}')
+    .then(r => r.json())
+    .then(d => {
+      document.querySelectorAll('[data-live="datasets"]').forEach(el => el.textContent = d.datasets);
+      document.querySelectorAll('[data-live="reports"]').forEach(el => el.textContent = d.reports);
+      document.querySelectorAll('[data-live="rows"]').forEach(el => el.textContent = d.total_rows.toLocaleString());
+    });
+}, 30000);
+</script>
+{% endblock %}

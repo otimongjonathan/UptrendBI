@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }}{% endblock %}
+{% block page_title %}{{ title | upper }}{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb + actions -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <nav style="font-size:.82rem">
+    <a href="{{ url_for('dashboard.reports') }}" class="text-muted text-decoration-none">Reports</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <span class="fw-semibold" style="color:#1c1917">{{ title }}</span>
+  </nav>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if dataset %}
+    <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-table me-1"></i>Dataset
+    </a>
+    <a href="{{ url_for('dashboard.analytics', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-success">
+      <i class="bi bi-graph-up me-1"></i>Analytics
+    </a>
+    {% endif %}
+    {% if report_id %}
+    <a href="{{ url_for('dashboard.download_report', report_id=report_id) }}" class="btn btn-sm btn-outline-primary">
+      <i class="bi bi-download me-1"></i>Download
+    </a>
+    <button class="btn btn-sm btn-outline-warning" data-bs-toggle="modal" data-bs-target="#emailModal">
+      <i class="bi bi-envelope me-1"></i>Send Email
+    </button>
+    {% endif %}
+    <a href="{{ url_for('dashboard.reports') }}" class="btn btn-sm btn-accent">
+      <i class="bi bi-file-earmark-bar-graph me-1"></i>All Reports
+    </a>
+  </div>
+</div>
+
+<!-- Chart card -->
+<div class="section-card overflow-hidden">
+  <div class="px-4 pt-4 pb-2 d-flex align-items-center gap-3" style="border-bottom:1px solid #f0ede8">
+    <div style="width:36px;height:36px;background:#fff7ed;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#f97316">
+      <i class="bi bi-bar-chart-fill"></i>
+    </div>
+    <div>
+      <div class="fw-bold">{{ title }}</div>
+      {% if dataset %}<div class="text-muted small">Source: {{ dataset.name }}</div>{% endif %}
+    </div>
+  </div>
+  <div class="p-3" style="background:#1c1917">
+    <div id="plotly-chart" style="min-height:520px"></div>
+  </div>
+</div>
+
+{% if report_id %}
+<!-- Annotations panel -->
+<div class="section-card p-4 mt-4">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center">
+      <i class="bi bi-pencil-square" style="color:#f97316"></i>
+    </div>
+    <div class="fw-bold">Chart Annotations</div>
+  </div>
+  {% if annotations %}
+  <div class="mb-3 p-3 rounded-3" style="background:#fafaf9;border-left:3px solid #f97316;white-space:pre-wrap;font-size:.875rem">{{ annotations }}</div>
+  {% endif %}
+  <form method="POST" action="{{ url_for('dashboard.annotate_report', report_id=report_id) }}" data-no-loader>
+    <textarea name="annotations" class="form-control mb-2" rows="3"
+              placeholder="Add notes, observations or context about this chart…">{{ annotations }}</textarea>
+    <button type="submit" class="btn btn-accent btn-sm"><i class="bi bi-save me-1"></i>Save Annotation</button>
+  </form>
+</div>
+
+<!-- Email modal -->
+<div class="modal fade" id="emailModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h6 class="modal-title fw-bold"><i class="bi bi-envelope me-2" style="color:#fb923c"></i>Send Report by Email</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{{ url_for('dashboard.email_report', report_id=report_id) }}" data-no-loader>
+        <div class="modal-body">
+          <p class="text-muted small mb-3">The chart will be attached as an interactive HTML file.</p>
+          <label class="form-label fw-semibold small">Recipient Email</label>
+          <input type="email" name="email" class="form-control" placeholder="recipient@example.com"
+                 value="{{ current_user.email }}" required>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-sm btn-accent"><i class="bi bi-send me-1"></i>Send</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+  const chartData = {{ chart_json | safe }};
+  Plotly.newPlot('plotly-chart', chartData.data, chartData.layout, {responsive: true, displayModeBar: true});
+</script>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+{% block content %}
+
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4 reveal">
+  <div>
+    <h5 class="fw-bold mb-0">Saved Reports</h5>
+    <p class="text-muted small mb-0">
+      {{ total }} chart{{ 's' if total != 1 }} across {{ grouped|length }} dataset{{ 's' if grouped|length != 1 }}
+    </p>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-accent btn-sm">
+    <i class="bi bi-plus-lg me-1"></i>New Chart
+  </a>
+</div>
+
+{% if grouped %}
+
+<!-- Search bar -->
+<div class="mb-4 reveal">
+  <div class="position-relative" style="max-width:420px">
+    <i class="bi bi-search position-absolute" style="left:14px;top:50%;transform:translateY(-50%);color:#a8a29e;font-size:.85rem"></i>
+    <input type="text" id="reportSearch" class="form-control ps-5"
+           placeholder="Search by dataset or chart name…"
+           style="border-radius:12px;border:1px solid #e8eaf0;font-size:.875rem">
+  </div>
+</div>
+
+<!-- Grouped sections -->
+<div id="reportGroups">
+  {% for dataset, reports in grouped %}
+  <div class="section-card mb-4 reveal dataset-group" data-dataset="{{ dataset.name | lower }}">
+
+    <!-- Dataset header -->
+    <div class="d-flex align-items-center justify-content-between px-4 py-3"
+         style="border-bottom:1px solid #e8eaf0">
+      <div class="d-flex align-items-center gap-3">
+        <div style="width:40px;height:40px;background:#fff7ed;border-radius:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <i class="bi bi-file-earmark-spreadsheet" style="color:#f97316;font-size:1.1rem"></i>
+        </div>
+        <div>
+          <div class="fw-bold" style="font-size:.95rem">{{ dataset.name }}</div>
+          <div class="text-muted" style="font-size:.72rem">
+            {{ "{:,}".format(dataset.rows) }} rows &middot; {{ dataset.columns }} cols &middot;
+            <span class="report-count">{{ reports|length }}</span> chart{{ 's' if reports|length != 1 }}
+          </div>
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}"
+           class="btn btn-sm btn-outline-secondary">
+          <i class="bi bi-eye me-1"></i>Explore
+        </a>
+        <a href="{{ url_for('dashboard.analytics', dataset_id=dataset.id) }}"
+           class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0">
+          <i class="bi bi-graph-up me-1"></i>Analytics
+        </a>
+      </div>
+    </div>
+
+    <!-- Report cards -->
+    <div class="p-4">
+      <div class="row g-3 report-cards">
+        {% for r in reports %}
+        <div class="col-sm-6 col-md-4 col-lg-3 report-card-col" data-title="{{ r.title | lower }}">
+          <div class="h-100 d-flex flex-column p-3 rounded-3"
+               style="background:#fafaf9;border:1px solid #e8eaf0;transition:transform .2s,box-shadow .2s"
+               onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.09)'"
+               onmouseout="this.style.transform='';this.style.boxShadow=''">
+
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div style="width:38px;height:38px;background:#fff7ed;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                <i class="bi bi-{% if r.chart_type == 'bar' %}bar-chart{% elif r.chart_type == 'line' %}graph-up{% elif r.chart_type == 'scatter' %}diagram-3{% elif r.chart_type == 'pie' %}pie-chart{% elif r.chart_type == 'heatmap' %}grid{% elif r.chart_type == 'area' %}graph-up-arrow{% elif r.chart_type == 'box' %}distribute-vertical{% else %}bar-chart-fill{% endif %}"
+                   style="color:#f97316;font-size:.95rem"></i>
+              </div>
+              <span class="badge rounded-pill" style="background:#fff7ed;color:#f97316;font-size:.62rem;font-weight:700">
+                {{ r.chart_type }}
+              </span>
+            </div>
+
+            <div class="fw-semibold text-truncate mb-1" style="font-size:.85rem" title="{{ r.title }}">
+              {{ r.title }}
+            </div>
+            <div class="text-muted mb-3" style="font-size:.72rem">
+              <i class="bi bi-clock me-1"></i>{{ r.created_at.strftime('%d %b %Y · %H:%M') }}
+            </div>
+
+            <div class="mt-auto d-flex gap-1">
+              <a href="{{ url_for('dashboard.view_report', report_id=r.id) }}"
+                 class="btn btn-accent btn-sm flex-fill">
+                <i class="bi bi-eye me-1"></i>View
+              </a>
+              <a href="{{ url_for('dashboard.download_report', report_id=r.id) }}"
+                 class="btn btn-sm btn-outline-primary" title="Download">
+                <i class="bi bi-download"></i>
+              </a>
+              <form method="POST" action="{{ url_for('dashboard.delete_report', report_id=r.id) }}"
+                    onsubmit="return confirm('Delete {{ r.title }}?')">
+                <button class="btn btn-sm btn-outline-danger" title="Delete">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- No match message (hidden by default) -->
+      <div class="no-match text-center py-3 text-muted small" style="display:none">
+        <i class="bi bi-search me-1"></i>No charts match your search.
+      </div>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Global no results -->
+<div id="noResults" class="section-card p-5 text-center" style="display:none">
+  <div style="width:60px;height:60px;background:#fff7ed;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.6rem;color:#f97316">
+    <i class="bi bi-search"></i>
+  </div>
+  <div class="fw-semibold mb-1">No results found</div>
+  <div class="text-muted small">Try a different dataset or chart name.</div>
+</div>
+
+{% else %}
+<div class="section-card p-5 text-center reveal">
+  <div style="width:72px;height:72px;background:#fff7ed;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem;font-size:2rem;color:#f97316">
+    <i class="bi bi-bar-chart-line"></i>
+  </div>
+  <h5 class="fw-bold mb-1">No reports yet</h5>
+  <p class="text-muted mb-3">Explore a dataset and build your first chart from the Chart Builder tab.</p>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-accent">
+    <i class="bi bi-arrow-left me-1"></i>Go to Dashboard
+  </a>
+</div>
+{% endif %}
+
+{% endblock %}
+{% block scripts %}
+<script>
+document.getElementById('reportSearch')?.addEventListener('input', function () {
+  const q = this.value.trim().toLowerCase();
+  let totalVisible = 0;
+
+  document.querySelectorAll('.dataset-group').forEach(group => {
+    const dsName   = group.dataset.dataset;
+    const cards    = group.querySelectorAll('.report-card-col');
+    const noMatch  = group.querySelector('.no-match');
+    let groupVisible = 0;
+
+    cards.forEach(card => {
+      const title    = card.dataset.title;
+      const matches  = !q || dsName.includes(q) || title.includes(q);
+      card.style.display = matches ? '' : 'none';
+      if (matches) groupVisible++;
+    });
+
+    // Hide entire group if nothing matches
+    group.style.display = groupVisible === 0 && q ? 'none' : '';
+    noMatch.style.display = groupVisible === 0 && !q ? 'none' : (groupVisible === 0 ? 'block' : 'none');
+    totalVisible += groupVisible;
+  });
+
+  document.getElementById('noResults').style.display =
+    (totalVisible === 0 && q) ? 'block' : 'none';
+});
+</script>
+{% endblock %}
