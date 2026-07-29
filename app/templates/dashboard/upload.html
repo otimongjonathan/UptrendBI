@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% block title %}Upload Dataset{% endblock %}
+{% block page_title %}Upload Dataset{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 reveal">
+  <div>
+    <h4 class="fw-bold mb-1">Upload Dataset</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem">Add a new CSV file to your workspace.</p>
+  </div>
+  <a href="{{ url_for('dashboard.index') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+  </a>
+</div>
+
+<div class="row justify-content-center reveal">
+  <div class="col-12 col-lg-7 col-xl-6">
+    <div class="section-card p-4">
+
+      <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="icon-wrap" style="width:52px;height:52px;background:#fff7ed;border-radius:15px;border:1.5px solid #fde8d0;flex-shrink:0">
+          <i class="bi bi-cloud-upload-fill" style="color:#f97316;font-size:1.4rem"></i>
+        </div>
+        <div>
+          <div class="fw-bold" style="font-size:1.05rem">New Dataset</div>
+          <div class="text-muted" style="font-size:.78rem">CSV files only &mdash; max 50 MB</div>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('data.upload') }}" enctype="multipart/form-data" id="uploadForm" data-no-loader>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem">
+            Dataset Name <span class="text-muted fw-normal">(optional)</span>
+          </label>
+          <input type="text" name="name" class="form-control" placeholder="e.g. Sales Q1 2026"
+                 style="border-radius:10px;border:1.5px solid #e5e7eb;font-size:.875rem">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem">Visibility <span class="text-danger">*</span></label>
+          <div class="d-flex gap-2">
+            <label class="flex-fill" id="lblPublic" style="cursor:pointer">
+              <input type="radio" name="visibility" value="public" class="d-none" id="visPublic">
+              <div class="text-center py-3 rounded-3 vis-opt" id="boxPublic"
+                   style="border:2px solid #e5e7eb;background:#f9fafb;transition:all .18s">
+                <i class="bi bi-globe2 d-block mb-1" style="font-size:1.3rem;color:#a8a29e" id="icoPublic"></i>
+                <div class="fw-700" style="font-size:.82rem">Public</div>
+                <div style="font-size:.7rem;color:#9ca3af">Visible to all users</div>
+              </div>
+            </label>
+            <label class="flex-fill" id="lblPrivate" style="cursor:pointer">
+              <input type="radio" name="visibility" value="private" class="d-none" id="visPrivate" checked>
+              <div class="text-center py-3 rounded-3 vis-opt" id="boxPrivate"
+                   style="border:2px solid #f97316;background:#fff7ed;transition:all .18s">
+                <i class="bi bi-lock-fill d-block mb-1" style="font-size:1.3rem;color:#f97316" id="icoPrivate"></i>
+                <div class="fw-700" style="font-size:.82rem">Private</div>
+                <div style="font-size:.7rem;color:#9ca3af">Only visible to you</div>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold" style="font-size:.82rem">
+            CSV File <span class="text-danger">*</span>
+          </label>
+          <label class="d-block text-center p-5 rounded-3" id="dropZone"
+                 style="border:2px dashed #fde8d0;cursor:pointer;background:#fffaf7;transition:border-color .2s,background .2s">
+            <i class="bi bi-file-earmark-arrow-up d-block mb-2" id="dropIcon" style="font-size:2.5rem;color:#f97316"></i>
+            <div class="fw-semibold mb-1" id="dropLabel" style="font-size:.9rem">Click or drag &amp; drop your CSV file here</div>
+            <div class="text-muted" style="font-size:.75rem">Supports .csv format</div>
+            <div class="fw-semibold d-none mt-2" id="fileName" style="font-size:.82rem;color:#f97316"></div>
+            <input type="file" name="file" accept=".csv" required class="d-none" id="fileInput">
+          </label>
+        </div>
+
+        <div id="uploadProgress" style="display:none;margin-bottom:1rem">
+          <div style="height:6px;background:#f3f4f6;border-radius:99px;overflow:hidden">
+            <div id="progressFill" style="height:100%;width:0%;background:linear-gradient(90deg,#f97316,#ea6c0a);border-radius:99px;transition:width .3s ease"></div>
+          </div>
+          <div id="progressLabel" class="text-muted text-center mt-1" style="font-size:.75rem">Uploading…</div>
+        </div>
+
+        <button type="submit" class="btn btn-accent w-100 py-2 d-flex align-items-center justify-content-center gap-2"
+                id="submitBtn" disabled style="border-radius:11px;font-size:.95rem;font-weight:700">
+          <i class="bi bi-upload"></i> Upload &amp; Explore
+        </button>
+      </form>
+
+      <div class="mt-4 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e5e7eb">
+        <div style="font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#9ca3af;margin-bottom:.6rem">Tips</div>
+        {% for tip in [
+          'First row should be column headers',
+          'UTF-8 encoding recommended',
+          'Remove merged cells before uploading',
+          'Large files (>10k rows) may take a moment',
+        ] %}
+        <div class="d-flex align-items-start gap-2 mb-1" style="font-size:.78rem;color:#6b7280">
+          <i class="bi bi-check2" style="color:#f97316;margin-top:1px;flex-shrink:0"></i> {{ tip }}
+        </div>
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+const fileInput  = document.getElementById('fileInput');
+const dropZone   = document.getElementById('dropZone');
+const dropLabel  = document.getElementById('dropLabel');
+const dropIcon   = document.getElementById('dropIcon');
+const fileName   = document.getElementById('fileName');
+const submitBtn  = document.getElementById('submitBtn');
+const uploadForm = document.getElementById('uploadForm');
+const progress   = document.getElementById('uploadProgress');
+const progFill   = document.getElementById('progressFill');
+const progLabel  = document.getElementById('progressLabel');
+
+function setFile(file) {
+  if (!file) return;
+  dropLabel.textContent = 'File selected';
+  dropIcon.className = 'bi bi-file-earmark-check d-block mb-2';
+  dropIcon.style.color = '#22c55e';
+  fileName.textContent = file.name;
+  fileName.classList.remove('d-none');
+  dropZone.style.borderColor = '#f97316';
+  dropZone.style.background  = '#fff7ed';
+  submitBtn.disabled = false;
+}
+
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.style.borderColor = '#f97316'; });
+dropZone.addEventListener('dragleave', () => { if (!fileInput.files[0]) dropZone.style.borderColor = '#fde8d0'; });
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.csv')) {
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    fileInput.files = dt.files;
+    setFile(file);
+  }
+});
+
+uploadForm.addEventListener('submit', () => {
+  submitBtn.disabled = true;
+  submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Uploading…';
+  progress.style.display = 'block';
+  let w = 0;
+  const iv = setInterval(() => {
+    w = Math.min(w + Math.random() * 8, 85);
+    progFill.style.width = w + '%';
+    progLabel.textContent = 'Processing… ' + Math.round(w) + '%';
+    if (w >= 85) clearInterval(iv);
+  }, 200);
+});
+
+// Visibility toggle
+const visPublic  = document.getElementById('visPublic');
+const visPrivate = document.getElementById('visPrivate');
+const boxPublic  = document.getElementById('boxPublic');
+const boxPrivate = document.getElementById('boxPrivate');
+const icoPublic  = document.getElementById('icoPublic');
+const icoPrivate = document.getElementById('icoPrivate');
+
+function updateVis() {
+  if (visPublic.checked) {
+    boxPublic.style.borderColor  = '#f97316'; boxPublic.style.background  = '#fff7ed';
+    boxPrivate.style.borderColor = '#e5e7eb'; boxPrivate.style.background = '#f9fafb';
+    icoPublic.style.color  = '#f97316';
+    icoPrivate.style.color = '#a8a29e';
+  } else {
+    boxPrivate.style.borderColor = '#f97316'; boxPrivate.style.background = '#fff7ed';
+    boxPublic.style.borderColor  = '#e5e7eb'; boxPublic.style.background  = '#f9fafb';
+    icoPrivate.style.color = '#f97316';
+    icoPublic.style.color  = '#a8a29e';
+  }
+}
+visPublic.addEventListener('change', updateVis);
+visPrivate.addEventListener('change', updateVis);
+updateVis();
+</script>
+{% endblock %}

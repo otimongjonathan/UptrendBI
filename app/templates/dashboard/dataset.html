@@ -1,0 +1,173 @@
+{% extends 'base.html' %}
+{% block title %}{{ dataset.name }} — Explorer{% endblock %}
+{% block page_title %}{{ dataset.name | upper }}{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb + actions -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 reveal">
+  <nav style="font-size:.82rem">
+    <a href="{{ url_for('dashboard.index') }}" class="text-muted text-decoration-none">Dashboard</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <span class="fw-semibold" style="color:#1c1917">{{ dataset.name }}</span>
+  </nav>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dashboard.nlq', dataset_id=dataset.id) }}" class="btn btn-sm" style="background:#0f0f1a;color:#fff;border:none"><i class="bi bi-chat-dots-fill me-1"></i>Ask AI</a>
+    <a href="{{ url_for('dashboard.data_story', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-richtext me-1"></i>Story</a>
+    <a href="{{ url_for('dashboard.data_quality', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-shield-check me-1"></i>Quality</a>
+    <a href="{{ url_for('dashboard.analytics', dataset_id=dataset.id) }}" class="btn btn-accent btn-sm"><i class="bi bi-graph-up me-1"></i>Analytics</a>
+    <a href="{{ url_for('dashboard.clean_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-magic me-1"></i>Clean</a>
+    <a href="{{ url_for('dashboard.download_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-download me-1"></i>Download</a>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4 stagger">
+  <div class="col-6 col-md-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:#fff7ed;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-list-ol" style="color:#f97316;font-size:1.1rem"></i>
+      </div>
+      <div><div class="fw-bold fs-4 lh-1">{{ "{:,}".format(summary.shape[0]) }}</div><div class="text-muted" style="font-size:.72rem">Total Rows</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:#f0f9ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-layout-three-columns" style="color:#0284c7;font-size:1.1rem"></i>
+      </div>
+      <div><div class="fw-bold fs-4 lh-1">{{ summary.shape[1] }}</div><div class="text-muted" style="font-size:.72rem">Columns</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:#f0fdf4;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-123" style="color:#16a34a;font-size:1.1rem"></i>
+      </div>
+      <div><div class="fw-bold fs-4 lh-1">{{ summary.numeric_cols|length }}</div><div class="text-muted" style="font-size:.72rem">Numeric</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:#faf5ff;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi bi-tag" style="color:#9333ea;font-size:1.1rem"></i>
+      </div>
+      <div><div class="fw-bold fs-4 lh-1">{{ summary.cat_cols|length }}</div><div class="text-muted" style="font-size:.72rem">Categorical</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="section-card overflow-hidden reveal">
+  <ul class="nav nav-tabs px-4 pt-3" style="border-bottom:1px solid #f0ede8">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#preview"><i class="bi bi-grid me-1"></i>Preview</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#stats"><i class="bi bi-calculator me-1"></i>Statistics</a></li>
+    <li class="nav-item">
+      <a class="nav-link" data-bs-toggle="tab" href="#nulls">
+        <i class="bi bi-exclamation-triangle me-1"></i>Missing Values
+        {% if summary.total_nulls > 0 %}<span class="badge bg-danger ms-1" style="font-size:.6rem">{{ summary.total_nulls }}</span>{% endif %}
+      </a>
+    </li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#chart"><i class="bi bi-bar-chart me-1"></i>Build Chart</a></li>
+  </ul>
+
+  <div class="tab-content p-4">
+    <!-- Preview -->
+    <div class="tab-pane fade show active" id="preview">
+      <div class="table-responsive">{{ summary.head | safe }}</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="tab-pane fade" id="stats">
+      <div class="table-responsive">{{ summary.describe | safe }}</div>
+    </div>
+
+    <!-- Nulls -->
+    <div class="tab-pane fade" id="nulls">
+      {% if summary.total_nulls == 0 %}
+      <div class="text-center py-4">
+        <div style="width:56px;height:56px;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.6rem;color:#16a34a">
+          <i class="bi bi-check-circle"></i>
+        </div>
+        <div class="fw-semibold">No missing values!</div>
+        <div class="text-muted small">Your dataset is clean.</div>
+      </div>
+      {% else %}
+      <div class="row g-3">
+        {% for item in summary.null_info %}
+        <div class="col-md-4">
+          <div class="p-3 rounded-3" style="background:#fafaf9;border:1px solid #f0ede8">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <span class="small fw-semibold text-truncate me-2" title="{{ item.col }}">{{ item.col }}</span>
+              <span class="badge {{ 'bg-danger' if item.count > 0 else 'bg-success' }}" style="font-size:.65rem">{{ item.count }}</span>
+            </div>
+            <div class="progress" style="height:5px;background:#f0ede8">
+              <div class="progress-bar {{ 'bg-danger' if item.count > 0 else 'bg-success' }}" style="width:{{ item.pct }}%"></div>
+            </div>
+            <div class="text-muted mt-1" style="font-size:.68rem">{{ item.pct }}% missing</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if summary.duplicates > 0 %}
+      <div class="alert alert-warning mt-3 py-2 mb-0 d-flex align-items-center gap-2">
+        <i class="bi bi-copy"></i>
+        <span>{{ summary.duplicates }} duplicate rows detected. <a href="{{ url_for('dashboard.clean_dataset', dataset_id=dataset.id) }}">Clean now →</a></span>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Chart Builder -->
+    <div class="tab-pane fade" id="chart">
+      <div class="mb-3">
+        <h6 class="fw-bold mb-0">Build a Visualisation</h6>
+        <p class="text-muted small mb-0">Configure and save a chart from your dataset</p>
+      </div>
+      <form method="POST" action="{{ url_for('dashboard.create_chart', dataset_id=dataset.id) }}" class="row g-3">
+        <div class="col-md-4">
+          <label class="form-label small fw-semibold">Chart Title <span class="text-danger">*</span></label>
+          <input type="text" name="title" class="form-control" placeholder="e.g. Sales by Region" required>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Chart Type</label>
+          <select name="chart_type" class="form-select">
+            <option value="bar">Bar</option>
+            <option value="line">Line</option>
+            <option value="scatter">Scatter</option>
+            <option value="histogram">Histogram</option>
+            <option value="box">Box Plot</option>
+            <option value="violin">Violin</option>
+            <option value="area">Area</option>
+            <option value="pie">Pie</option>
+            <option value="funnel">Funnel</option>
+            <option value="heatmap">Heatmap</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">X Axis</label>
+          <select name="x_col" class="form-select">
+            {% for col in summary.columns %}<option value="{{ col }}">{{ col }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Y Axis</label>
+          <select name="y_col" class="form-select">
+            <option value="">— None —</option>
+            {% for col in summary.numeric_cols %}<option value="{{ col }}">{{ col }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label small fw-semibold">Color By</label>
+          <select name="color_col" class="form-select">
+            <option value="">— None —</option>
+            {% for col in summary.cat_cols %}<option value="{{ col }}">{{ col }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-12">
+          <button type="submit" class="btn btn-accent"><i class="bi bi-bar-chart me-1"></i>Generate & Save Chart</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
