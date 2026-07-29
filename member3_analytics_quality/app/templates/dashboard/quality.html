@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% block title %}Quality — {{ dataset.name }}{% endblock %}
+{% block page_title %}DATA QUALITY{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2 reveal">
+  <nav style="font-size:.82rem">
+    <a href="{{ url_for('dashboard.datasets_page') }}" class="text-muted text-decoration-none">Datasets</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}" class="text-muted text-decoration-none">{{ dataset.name }}</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <span class="fw-semibold">Quality Report</span>
+  </nav>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dashboard.data_story', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-journal-text me-1"></i>Story</a>
+    <a href="{{ url_for('dashboard.nlq', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-chat-dots me-1"></i>Ask AI</a>
+    <a href="{{ url_for('dashboard.clean_dataset', dataset_id=dataset.id) }}" class="btn btn-accent btn-sm"><i class="bi bi-magic me-1"></i>Clean Dataset</a>
+  </div>
+</div>
+
+<!-- Score hero -->
+<div class="row g-4 mb-4 stagger">
+  <!-- Ring -->
+  <div class="col-md-4">
+    <div class="section-card p-4 text-center h-100 d-flex flex-direction-column align-items-center justify-content-center">
+      <div style="position:relative;width:160px;height:160px;margin:0 auto 1.25rem">
+        <svg width="160" height="160" style="transform:rotate(-90deg)">
+          <circle cx="80" cy="80" r="66" fill="none" stroke="#f3f4f6" stroke-width="12"/>
+          <circle cx="80" cy="80" r="66" fill="none" stroke="{{ color }}" stroke-width="12"
+                  stroke-dasharray="{{ (score / 100 * 414.69)|round(1) }} 414.69"
+                  stroke-linecap="round"
+                  style="transition:stroke-dasharray 1.2s ease"/>
+        </svg>
+        <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div style="font-size:2.4rem;font-weight:900;color:{{ color }};line-height:1">{{ score }}</div>
+          <div style="font-size:.7rem;color:#9ca3af;font-weight:600;letter-spacing:.5px">/ 100</div>
+        </div>
+      </div>
+      <div style="font-size:1.2rem;font-weight:800;color:{{ color }}">{{ grade }}</div>
+      <div class="text-muted" style="font-size:.8rem;margin-top:.25rem">Overall Data Quality</div>
+    </div>
+  </div>
+
+  <!-- Breakdown -->
+  <div class="col-md-8">
+    <div class="section-card p-4 h-100">
+      <div class="fw-bold mb-3" style="font-size:.95rem">Score Breakdown</div>
+      <div class="row g-3">
+        {% for label, val, icon, c, desc in [
+          ('Completeness',  (100 - null_pct)|round|int,    'bi-check2-all',        '#22c55e', null_pct|string + '% missing values'),
+          ('Uniqueness',    (100 - dup_pct)|round|int,     'bi-fingerprint',       '#0284c7', dup_pct|string + '% duplicate rows'),
+          ('Consistency',   (100 - outlier_pct)|round|int, 'bi-shield-check',      '#8b5cf6', outlier_pct|string + '% outlier rate'),
+        ] %}
+        <div class="col-md-4">
+          <div class="p-3 rounded-3" style="background:#fafaf9;border:1px solid #f0ede8">
+            <div class="d-flex align-items-center gap-2 mb-2">
+              <div style="width:32px;height:32px;border-radius:8px;background:{{ c }}1a;display:flex;align-items:center;justify-content:center">
+                <i class="bi {{ icon }}" style="color:{{ c }};font-size:.9rem"></i>
+              </div>
+              <span class="fw-semibold" style="font-size:.82rem">{{ label }}</span>
+            </div>
+            <div style="font-size:1.6rem;font-weight:800;color:{{ c }};line-height:1">{{ val }}%</div>
+            <div class="text-muted mt-1" style="font-size:.72rem">{{ desc }}</div>
+            <div class="mt-2" style="height:5px;background:#f0ede8;border-radius:99px;overflow:hidden">
+              <div style="height:100%;width:{{ val }}%;background:{{ c }};border-radius:99px;transition:width 1s ease"></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Column profiles -->
+<div class="section-card reveal">
+  <div class="px-4 pt-4 pb-3 d-flex align-items-center gap-2" style="border-bottom:1px solid #f0ede8">
+    <div style="width:36px;height:36px;border-radius:10px;background:#fff7ed;display:flex;align-items:center;justify-content:center">
+      <i class="bi bi-layout-three-columns" style="color:#f97316"></i>
+    </div>
+    <div>
+      <div class="fw-bold" style="font-size:.95rem">Column Profiles</div>
+      <div class="text-muted" style="font-size:.72rem">{{ col_profiles|length }} columns analysed</div>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Column</th>
+          <th>Type</th>
+          <th>Nulls</th>
+          <th>Unique</th>
+          <th>Stats</th>
+          <th>Quality</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in col_profiles %}
+        <tr>
+          <td class="ps-4 fw-semibold" style="font-size:.875rem">{{ p.name }}</td>
+          <td><span class="badge rounded-pill" style="background:#f0f9ff;color:#0284c7;font-size:.68rem">{{ p.dtype }}</span></td>
+          <td>
+            {% if p.nulls > 0 %}
+            <span class="text-danger fw-semibold" style="font-size:.82rem">{{ p.nulls }} <span class="text-muted fw-normal">({{ p.null_pct }}%)</span></span>
+            {% else %}
+            <span class="text-success" style="font-size:.82rem"><i class="bi bi-check2"></i> None</span>
+            {% endif %}
+          </td>
+          <td><span class="text-muted" style="font-size:.82rem">{{ p.unique }}</span></td>
+          <td style="font-size:.75rem;color:#6b7280">
+            {% if p.mean is defined %}
+              μ={{ p.mean }} &nbsp;σ={{ p.std }}<br>
+              <span style="color:#ef4444">{{ p.outliers }} outliers</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div style="width:60px;height:5px;background:#f0ede8;border-radius:99px;overflow:hidden">
+                <div style="height:100%;width:{{ p.score }}%;background:{% if p.score>=80 %}#22c55e{% elif p.score>=60 %}#84cc16{% elif p.score>=40 %}#f97316{% else %}#ef4444{% endif %};border-radius:99px"></div>
+              </div>
+              <span style="font-size:.72rem;font-weight:700;color:{% if p.score>=80 %}#22c55e{% elif p.score>=60 %}#84cc16{% elif p.score>=40 %}#f97316{% else %}#ef4444{% endif %}">{{ p.score }}</span>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}{% endblock %}
