@@ -47,13 +47,13 @@ Before running the application, ensure the following software is installed:
 Open a terminal and run:
 
 ```bash
-git clone https://github.com/your-username/your-repository.git
+[git clone https://github.com/your-username/your-repository.git](https://github.com/otimongjonathan/UptrendBI.git)
 ```
 
 Navigate into the project folder:
 
 ```bash
-cd your-repository
+cd UptrendBI
 ```
 
 ---
@@ -63,13 +63,13 @@ cd your-repository
 Windows
 
 ```bash
-python -m venv venv
+python -m venv .venv
 ```
 
 Linux / macOS
 
 ```bash
-python3 -m venv venv
+python3 -m venv .venv
 ```
 
 ---
