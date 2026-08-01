@@ -79,7 +79,7 @@ python3 -m venv .venv
 Windows
 
 ```bash
-venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 Linux / macOS
@@ -117,14 +117,12 @@ Create a `.env` file in the project root and add the following information:
 ```
 SECRET_KEY=your_secret_key
 
-DATABASE_URL=postgresql://username:password@localhost/database_name
+DATABASE_URL=postgresql://postgres:password@localhost/UptrendBI
 ```
 
 Replace:
 
-- `username` with your PostgreSQL username
 - `password` with your PostgreSQL password
-- `database_name` with your database name
 
 ---
 
