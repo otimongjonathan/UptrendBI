@@ -1,0 +1,354 @@
+{% extends 'base.html' %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+{% set total_cols = datasets | sum(attribute='columns') %}
+
+<!-- Greeting + quick actions -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3 reveal">
+  <div>
+    <h4 class="fw-bold mb-1">
+      {% if now_hour < 12 %}Good morning{% elif now_hour < 17 %}Good afternoon{% else %}Good evening{% endif %},
+      {{ current_user.username }} 👋
+    </h4>
+    <p class="text-muted mb-0" style="font-size:.875rem">
+      You have <strong>{{ datasets|length }}</strong> dataset{{ 's' if datasets|length != 1 }} and
+      <strong>{{ reports|length }}</strong> saved report{{ 's' if reports|length != 1 }}.
+    </p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-accent d-flex align-items-center gap-2">
+      <i class="bi bi-cloud-upload"></i> Upload Dataset
+    </a>
+    <a href="{{ url_for('dashboard.dashboard_view') }}" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+      <i class="bi bi-grid-1x2"></i> Live View
+    </a>
+  </div>
+</div>
+
+<!-- KPI cards -->
+<div class="row g-3 mb-4 stagger">
+  {% set kpis = [
+    ('bi-cloud-upload-fill',   '#fff7ed', '#f97316', 'Upload',      'Add Dataset',    'Import a CSV file',      url_for('dashboard.upload_page')),
+    ('bi-graph-up-arrow',      '#f0fdf4', '#16a34a', 'Analytics',   'Auto Analytics', 'Insights & charts',      url_for('dashboard.datasets_page')),
+    ('bi-magic',               '#fef9c3', '#ca8a04', 'Clean',       'Data Cleaning',  'Fix & prepare data',     url_for('dashboard.datasets_page')),
+    ('bi-grid-1x2-fill',       '#f0f9ff', '#0284c7', 'Live View',   'Live Dashboard', 'All charts in one view', url_for('dashboard.dashboard_view')),
+    ('bi-plug-fill',           '#faf5ff', '#9333ea', 'DB Connect',  'DB Connector',   'Query any database',     url_for('dashboard.db_connect')),
+    ('bi-compass',             '#fff7ed', '#f59e0b', 'Explore',     'Explore Data',   'Community datasets',     url_for('dashboard.explore')),
+  ] %}
+  {% for icon, bg, color, short, label, sub, href in kpis %}
+  <div class="col-6 col-md-2">
+    <a href="{{ href }}" class="stat-card p-3 d-block text-decoration-none text-center">
+      <div style="width:44px;height:44px;background:{{ bg }};border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem">
+        <i class="bi {{ icon }}" style="color:{{ color }};font-size:1.2rem"></i>
+      </div>
+      <div class="fw-bold mb-1" style="font-size:.88rem;color:#1c1917">{{ label }}</div>
+      <div style="font-size:.7rem;color:#a8a29e">{{ sub }}</div>
+    </a>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4 mb-4">
+  <!-- Datasets table -->
+  <div class="col-lg-8">
+    <div class="section-card reveal h-100">
+      <div class="d-flex align-items-center justify-content-between px-4 pt-4 pb-3" style="border-bottom:1px solid #f0ede8">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:36px;height:36px;background:#fff7ed;border-radius:9px;display:flex;align-items:center;justify-content:center">
+            <i class="bi bi-table" style="color:#f97316"></i>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:.95rem">My Datasets</div>
+            <div class="text-muted" style="font-size:.72rem">{{ datasets|length }} dataset{{ 's' if datasets|length != 1 }}</div>
+          </div>
+        </div>
+        <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-accent btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>New
+        </a>
+      </div>
+
+      {% if datasets %}
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              <th class="ps-4">Dataset</th>
+              <th>Rows</th>
+              <th>Cols</th>
+              <th>Uploaded</th>
+              <th class="pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ds in datasets %}
+            <tr>
+              <td class="ps-4">
+                <div class="d-flex align-items-center gap-3">
+                  <div style="width:34px;height:34px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    <i class="bi bi-file-earmark-spreadsheet" style="color:#f97316;font-size:.9rem"></i>
+                  </div>
+                  <div>
+                    <div class="fw-semibold" style="font-size:.875rem">{{ ds.name }}</div>
+                    <div class="text-muted" style="font-size:.72rem">{{ ds.filename }}</div>
+                  </div>
+                </div>
+              </td>
+              <td><span class="fw-semibold" style="font-size:.875rem">{{ "{:,}".format(ds.rows) }}</span></td>
+              <td><span class="badge rounded-pill" style="background:#f0f9ff;color:#0284c7;font-weight:600;font-size:.72rem">{{ ds.columns }}</span></td>
+              <td><span class="text-muted" style="font-size:.8rem">{{ ds.uploaded_at.strftime('%d %b %Y') }}</span></td>
+              <td class="pe-4">
+                <div class="d-flex gap-1">
+                  <a href="{{ url_for('dashboard.view_dataset', dataset_id=ds.id) }}" class="btn btn-sm btn-outline-secondary" title="Explore"><i class="bi bi-eye"></i></a>
+                  <a href="{{ url_for('dashboard.analytics', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" title="Analytics"><i class="bi bi-graph-up"></i></a>
+                  <a href="{{ url_for('dashboard.clean_dataset', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#fef9c3;color:#ca8a04;border:1px solid #fde68a" title="Clean"><i class="bi bi-magic"></i></a>
+                  <form method="POST" action="{{ url_for('data.delete', dataset_id=ds.id) }}" class="d-inline" onsubmit="return confirm('Delete {{ ds.name }}?')">
+                    <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <div style="width:64px;height:64px;background:#fff7ed;border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+          <i class="bi bi-inbox" style="color:#f97316;font-size:1.8rem"></i>
+        </div>
+        <div class="fw-semibold mb-1">No datasets yet</div>
+        <div class="text-muted small mb-3">Upload a CSV file to get started</div>
+        <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-accent btn-sm">
+          <i class="bi bi-upload me-1"></i>Upload your first dataset
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Right column: Quick actions + data health -->
+  <div class="col-lg-4 d-flex flex-column gap-4">
+
+    <!-- Quick Actions -->
+    <div class="section-card p-4 reveal">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-lightning-fill" style="color:#f97316"></i>
+        </div>
+        <div class="fw-bold" style="font-size:.9rem">Quick Actions</div>
+      </div>
+      <div class="d-flex flex-column gap-2">
+        <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-sm btn-outline-secondary text-start d-flex align-items-center gap-2">
+          <i class="bi bi-cloud-upload" style="color:#f97316"></i> Upload New Dataset
+        </a>
+        <a href="{{ url_for('dashboard.dashboard_view') }}" class="btn btn-sm btn-outline-secondary text-start d-flex align-items-center gap-2">
+          <i class="bi bi-grid-1x2-fill" style="color:#0284c7"></i> Open Live View
+        </a>
+        <a href="{{ url_for('dashboard.db_connect') }}" class="btn btn-sm btn-outline-secondary text-start d-flex align-items-center gap-2">
+          <i class="bi bi-plug-fill" style="color:#9333ea"></i> Connect Database
+        </a>
+        <a href="{{ url_for('dashboard.reports') }}" class="btn btn-sm btn-outline-secondary text-start d-flex align-items-center gap-2">
+          <i class="bi bi-bar-chart-line" style="color:#16a34a"></i> View All Reports
+        </a>
+        {% if datasets %}
+        <a href="{{ url_for('dashboard.explore') }}" class="btn btn-sm btn-outline-secondary text-start d-flex align-items-center gap-2">
+          <i class="bi bi-compass" style="color:#f59e0b"></i> Explore Community Data
+        </a>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Data Health -->
+    {% if datasets %}
+    <div class="section-card p-4 reveal">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-heart-pulse-fill" style="color:#16a34a"></i>
+        </div>
+        <div class="fw-bold" style="font-size:.9rem">Data Health</div>
+      </div>
+      {% set avg_cols = (total_cols / datasets|length) | round(1) %}
+      {% set avg_rows = (total_rows / datasets|length) | round(0) | int %}
+      <div class="d-flex flex-column gap-3">
+        <div>
+          <div class="d-flex justify-content-between mb-1">
+            <span style="font-size:.78rem;color:#6b7280">Avg rows per dataset</span>
+            <span class="fw-semibold" style="font-size:.78rem">{{ "{:,}".format(avg_rows) }}</span>
+          </div>
+          <div class="progress" style="height:5px;background:#f0ede8;border-radius:99px">
+            <div class="progress-bar" style="width:{{ [avg_rows / 10000 * 100, 100]|min }}%;background:#f97316;border-radius:99px"></div>
+          </div>
+        </div>
+        <div>
+          <div class="d-flex justify-content-between mb-1">
+            <span style="font-size:.78rem;color:#6b7280">Avg columns per dataset</span>
+            <span class="fw-semibold" style="font-size:.78rem">{{ avg_cols }}</span>
+          </div>
+          <div class="progress" style="height:5px;background:#f0ede8;border-radius:99px">
+            <div class="progress-bar" style="width:{{ [avg_cols / 50 * 100, 100]|min }}%;background:#0284c7;border-radius:99px"></div>
+          </div>
+        </div>
+        <div>
+          <div class="d-flex justify-content-between mb-1">
+            <span style="font-size:.78rem;color:#6b7280">Reports per dataset</span>
+            <span class="fw-semibold" style="font-size:.78rem">{{ (reports|length / datasets|length) | round(1) }}</span>
+          </div>
+          <div class="progress" style="height:5px;background:#f0ede8;border-radius:99px">
+            <div class="progress-bar" style="width:{{ [reports|length / datasets|length / 5 * 100, 100]|min }}%;background:#16a34a;border-radius:99px"></div>
+          </div>
+        </div>
+      </div>
+      {% if datasets %}
+      <div class="mt-3 pt-3" style="border-top:1px solid #f0ede8">
+        <div style="font-size:.72rem;color:#a8a29e;margin-bottom:.5rem">LATEST DATASET</div>
+        <div class="fw-semibold" style="font-size:.82rem">{{ datasets[0].name }}</div>
+        <div class="text-muted" style="font-size:.72rem">{{ "{:,}".format(datasets[0].rows) }} rows · {{ datasets[0].columns }} cols · {{ datasets[0].uploaded_at.strftime('%d %b %Y') }}</div>
+        <a href="{{ url_for('dashboard.analytics', dataset_id=datasets[0].id) }}" class="btn btn-sm btn-accent w-100 mt-2">
+          <i class="bi bi-graph-up me-1"></i>Analyse
+        </a>
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Bottom section: Activity Feed + Top Insights + Pinned Charts -->
+<div class="row g-4 mt-1">
+
+  <!-- Activity Feed -->
+  <div class="col-lg-4 reveal">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-clock-history" style="color:#f97316"></i>
+        </div>
+        <div class="fw-bold" style="font-size:.9rem">Recent Activity</div>
+      </div>
+      <div class="d-flex flex-column gap-2">
+        {% for ds in datasets[:3] %}
+        <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background:#fafaf9">
+          <div style="width:30px;height:30px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-cloud-upload-fill" style="color:#f97316;font-size:.8rem"></i>
+          </div>
+          <div style="min-width:0">
+            <div class="fw-semibold text-truncate" style="font-size:.8rem">{{ ds.name }}</div>
+            <div class="text-muted" style="font-size:.7rem">Uploaded &middot; {{ ds.uploaded_at.strftime('%d %b %Y') }}</div>
+            <div style="font-size:.68rem;color:#a8a29e">{{ "{:,}".format(ds.rows) }} rows &middot; {{ ds.columns }} cols</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% for r in reports[:3] %}
+        <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background:#fafaf9">
+          <div style="width:30px;height:30px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+            <i class="bi bi-bar-chart-fill" style="color:#16a34a;font-size:.8rem"></i>
+          </div>
+          <div style="min-width:0">
+            <div class="fw-semibold text-truncate" style="font-size:.8rem">{{ r.title }}</div>
+            <div class="text-muted" style="font-size:.7rem">Chart saved &middot; {{ r.created_at.strftime('%d %b %Y') }}</div>
+            <div style="font-size:.68rem;color:#a8a29e">{{ r.chart_type }} chart</div>
+          </div>
+        </div>
+        {% endfor %}
+        {% if not datasets and not reports %}
+        <div class="text-center py-3 text-muted small">No activity yet</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Insights -->
+  <div class="col-lg-4 reveal">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center gap-2 mb-3">
+        <div style="width:32px;height:32px;background:#faf5ff;border-radius:8px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-lightbulb-fill" style="color:#9333ea"></i>
+        </div>
+        <div class="fw-bold" style="font-size:.9rem">Top Insights</div>
+      </div>
+      {% if datasets %}
+      <div class="d-flex flex-column gap-2">
+        <div class="p-2 rounded-3 d-flex gap-2 align-items-start" style="background:#fff7ed">
+          <i class="bi bi-database-fill mt-1 flex-shrink-0" style="color:#f97316;font-size:.8rem"></i>
+          <span style="font-size:.8rem">You have <strong>{{ datasets|length }}</strong> dataset{{ 's' if datasets|length != 1 }} with a total of <strong>{{ "{:,}".format(total_rows) }}</strong> rows.</span>
+        </div>
+        {% set largest = datasets | sort(attribute='rows') | last %}
+        <div class="p-2 rounded-3 d-flex gap-2 align-items-start" style="background:#f0fdf4">
+          <i class="bi bi-arrow-up-circle-fill mt-1 flex-shrink-0" style="color:#16a34a;font-size:.8rem"></i>
+          <span style="font-size:.8rem">Largest dataset: <strong>{{ largest.name }}</strong> with <strong>{{ "{:,}".format(largest.rows) }}</strong> rows.</span>
+        </div>
+        {% set most_cols = datasets | sort(attribute='columns') | last %}
+        <div class="p-2 rounded-3 d-flex gap-2 align-items-start" style="background:#f0f9ff">
+          <i class="bi bi-layout-three-columns mt-1 flex-shrink-0" style="color:#0284c7;font-size:.8rem"></i>
+          <span style="font-size:.8rem">Most columns: <strong>{{ most_cols.name }}</strong> with <strong>{{ most_cols.columns }}</strong> columns.</span>
+        </div>
+        {% if reports %}
+        <div class="p-2 rounded-3 d-flex gap-2 align-items-start" style="background:#faf5ff">
+          <i class="bi bi-bar-chart-fill mt-1 flex-shrink-0" style="color:#9333ea;font-size:.8rem"></i>
+          <span style="font-size:.8rem">You have <strong>{{ reports|length }}</strong> saved report{{ 's' if reports|length != 1 }}. Latest: <strong>{{ reports[0].title }}</strong>.</span>
+        </div>
+        {% endif %}
+        <div class="mt-2">
+          {% for ds in datasets[:2] %}
+          <a href="{{ url_for('dashboard.analytics', dataset_id=ds.id) }}" class="btn btn-sm btn-outline-secondary w-100 mb-1 text-start" style="font-size:.78rem">
+            <i class="bi bi-graph-up me-1" style="color:#f97316"></i>Analyse <strong>{{ ds.name }}</strong>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <div class="text-center py-3 text-muted small">Upload a dataset to see insights</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Pinned / Recent Charts -->
+  <div class="col-lg-4 reveal">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center gap-2">
+          <div style="width:32px;height:32px;background:#f0f9ff;border-radius:8px;display:flex;align-items:center;justify-content:center">
+            <i class="bi bi-pin-angle-fill" style="color:#0284c7"></i>
+          </div>
+          <div class="fw-bold" style="font-size:.9rem">Saved Charts</div>
+        </div>
+        <a href="{{ url_for('dashboard.reports') }}" style="font-size:.75rem">View all <i class="bi bi-arrow-right"></i></a>
+      </div>
+      {% if reports %}
+      <div class="d-flex flex-column gap-2">
+        {% for r in reports[:5] %}
+        <a href="{{ url_for('dashboard.view_report', report_id=r.id) }}" class="text-decoration-none">
+          <div class="d-flex align-items-center gap-3 p-2 rounded-3" style="background:#fafaf9;transition:background .15s"
+               onmouseover="this.style.background='#fff7ed'" onmouseout="this.style.background='#fafaf9'">
+            <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <i class="bi bi-{% if r.chart_type == 'bar' %}bar-chart{% elif r.chart_type == 'line' %}graph-up{% elif r.chart_type == 'scatter' %}diagram-3{% elif r.chart_type == 'pie' %}pie-chart{% elif r.chart_type == 'heatmap' %}grid{% else %}bar-chart-fill{% endif %}" style="color:#f97316;font-size:.85rem"></i>
+            </div>
+            <div style="min-width:0;flex:1">
+              <div class="fw-semibold text-truncate" style="font-size:.8rem;color:#1c1917">{{ r.title }}</div>
+              <div style="font-size:.68rem;color:#a8a29e">{{ r.chart_type }} &middot; {{ r.created_at.strftime('%d %b %Y') }}</div>
+            </div>
+            <i class="bi bi-chevron-right" style="color:#d1d5db;font-size:.75rem;flex-shrink:0"></i>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center py-3">
+        <div style="font-size:1.5rem;color:#f0ede8;margin-bottom:.5rem"><i class="bi bi-bar-chart"></i></div>
+        <div class="text-muted small">No charts saved yet</div>
+        {% if datasets %}
+        <a href="{{ url_for('dashboard.view_dataset', dataset_id=datasets[0].id) }}" class="btn btn-accent btn-sm mt-2">
+          <i class="bi bi-plus me-1"></i>Build a chart
+        </a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}
+{% block scripts %}{% endblock %}

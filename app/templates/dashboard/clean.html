@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block title %}Clean — {{ dataset.name }}{% endblock %}
+{% block page_title %}DATA CLEANING: {{ dataset.name | upper }}{% endblock %}
+{% block content %}
+
+<!-- Breadcrumb -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+  <nav style="font-size:.82rem">
+    <a href="{{ url_for('dashboard.index') }}" class="text-muted text-decoration-none">Dashboard</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <a href="{{ url_for('dashboard.view_dataset', dataset_id=dataset.id) }}" class="text-muted text-decoration-none">{{ dataset.name }}</a>
+    <i class="bi bi-chevron-right mx-1 text-muted" style="font-size:.7rem"></i>
+    <span class="fw-semibold" style="color:#1c1917">Clean</span>
+  </nav>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('dashboard.download_dataset', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-success"><i class="bi bi-download me-1"></i>Download CSV</a>
+    <a href="{{ url_for('dashboard.analytics', dataset_id=dataset.id) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-graph-up me-1"></i>Analytics</a>
+  </div>
+</div>
+
+<!-- Status KPIs -->
+<div class="row g-3 mb-4 stagger">
+  {% for val, label, icon, color, bg in [
+    ("{:,}".format(shape[0]), 'Rows', 'bi-list-ol', '#f97316', '#fff7ed'),
+    (shape[1], 'Columns', 'bi-layout-three-columns', '#0284c7', '#f0f9ff'),
+    (null_info.values()|sum, 'Missing Values', 'bi-exclamation-triangle', '#dc3545' if null_info.values()|sum > 0 else '#16a34a', '#fef2f2' if null_info.values()|sum > 0 else '#f0fdf4'),
+    (duplicates, 'Duplicates', 'bi-copy', '#ca8a04' if duplicates > 0 else '#16a34a', '#fef9c3' if duplicates > 0 else '#f0fdf4'),
+  ] %}
+  <div class="col-6 col-md-3">
+    <div class="stat-card p-3 d-flex align-items-center gap-3">
+      <div style="width:40px;height:40px;border-radius:10px;background:{{ bg }};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <i class="bi {{ icon }}" style="color:{{ color }};font-size:1.1rem"></i>
+      </div>
+      <div>
+        <div class="fw-bold fs-4 lh-1" style="color:{{ color }}">{{ val }}</div>
+        <div class="text-muted" style="font-size:.72rem">{{ label }}</div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="row g-4">
+  <!-- Actions panel -->
+  <div class="col-lg-4">
+    <div class="section-card p-4 h-100">
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <div style="width:34px;height:34px;background:#fff7ed;border-radius:9px;display:flex;align-items:center;justify-content:center">
+          <i class="bi bi-magic" style="color:#f97316"></i>
+        </div>
+        <h6 class="fw-bold mb-0">Cleaning Actions</h6>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="mb-3">
+        <div class="small fw-semibold text-muted text-uppercase mb-2" style="letter-spacing:.5px">Quick Actions</div>
+        <form method="POST" class="mb-2">
+          <input type="hidden" name="action" value="drop_duplicates">
+          <button type="button" class="btn btn-sm w-100 d-flex align-items-center gap-2 {{ 'btn-outline-warning' if duplicates > 0 else 'btn-outline-secondary' }}" {% if duplicates == 0 %}disabled{% endif %}
+            onclick="confirmAction(this.closest('form'), 'Remove {{ duplicates }} duplicate rows?')">
+            <i class="bi bi-copy"></i>
+            <span>Remove {{ duplicates }} Duplicates</span>
+            {% if duplicates > 0 %}<span class="badge bg-warning text-dark ms-auto">{{ duplicates }}</span>{% endif %}
+          </button>
+        </form>
+        <form method="POST">
+          <input type="hidden" name="action" value="drop_nulls_all">
+          <button type="button" class="btn btn-sm w-100 d-flex align-items-center gap-2 {{ 'btn-outline-danger' if null_info.values()|sum > 0 else 'btn-outline-secondary' }}" {% if null_info.values()|sum == 0 %}disabled{% endif %}
+            onclick="confirmAction(this.closest('form'), 'Drop ALL rows containing null values? This cannot be undone.')">
+            <i class="bi bi-trash"></i>
+            <span>Drop All Rows with Nulls</span>
+            {% if null_info.values()|sum > 0 %}<span class="badge bg-danger ms-auto">{{ null_info.values()|sum }}</span>{% endif %}
+          </button>
+        </form>
+      </div>
+
+      <hr style="border-color:#f0ede8">
+
+      <!-- Per-column -->
+      <div class="small fw-semibold text-muted text-uppercase mb-2" style="letter-spacing:.5px">Per-Column Operations</div>
+      <form method="POST" class="d-flex flex-column gap-2">
+        <select name="col" class="form-select form-select-sm">
+          {% for col in columns %}
+          <option value="{{ col }}">{{ col }}{% if null_info[col] > 0 %} — {{ null_info[col] }} nulls{% endif %}</option>
+          {% endfor %}
+        </select>
+        <select name="action" class="form-select form-select-sm" id="actionSelect">
+          <option value="drop_nulls_col">Drop rows where null</option>
+          <option value="fill_mean">Fill with Mean</option>
+          <option value="fill_median">Fill with Median</option>
+          <option value="fill_mode">Fill with Mode</option>
+          <option value="fill_value">Fill with Custom Value</option>
+          <option value="drop_col">Drop column entirely</option>
+        </select>
+        <div id="fillValueRow" style="display:none">
+          <input type="text" name="fill_value" class="form-control form-control-sm" placeholder="Enter fill value">
+        </div>
+        <button type="submit" class="btn btn-accent btn-sm" id="applyBtn"><i class="bi bi-check-lg me-1"></i>Apply Operation</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Right side -->
+  <div class="col-lg-8">
+    <!-- Missing values map -->
+    <div class="section-card p-4 mb-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-map me-2" style="color:#f97316"></i>Missing Values Map</h6>
+      {% if null_info.values()|sum == 0 %}
+      <div class="text-center py-3">
+        <i class="bi bi-check-circle-fill fs-2 d-block mb-2" style="color:#16a34a"></i>
+        <span class="text-success fw-semibold">All columns are complete — no missing values!</span>
+      </div>
+      {% else %}
+      <div class="row g-2">
+        {% for col, count in null_info.items() %}
+        <div class="col-md-6">
+          <div class="p-2 rounded-3" style="background:#fafaf9;border:1px solid #f0ede8">
+            <div class="d-flex justify-content-between align-items-center mb-1">
+              <span class="small text-truncate me-2 fw-semibold" style="max-width:140px" title="{{ col }}">{{ col }}</span>
+              <span class="badge {{ 'bg-danger' if count > 0 else 'bg-success' }}" style="font-size:.62rem">{{ count }}</span>
+            </div>
+            <div class="progress" style="height:4px;background:#f0ede8">
+              <div class="progress-bar {{ 'bg-danger' if count > 0 else 'bg-success' }}"
+                   style="width:{{ (count / shape[0] * 100) | round(1) }}%"></div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Data preview -->
+    <div class="section-card p-4">
+      <h6 class="fw-bold mb-3"><i class="bi bi-grid me-2" style="color:#f97316"></i>Data Preview</h6>
+      <div class="table-responsive">
+        {{ df_head.to_html(classes='table table-sm table-hover', index=False) | safe }}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  document.getElementById('actionSelect').addEventListener('change', function() {
+    document.getElementById('fillValueRow').style.display = this.value === 'fill_value' ? 'block' : 'none';
+  });
+
+  // Confirm destructive per-column actions
+  document.getElementById('applyBtn').addEventListener('click', function(e) {
+    const action = document.getElementById('actionSelect').value;
+    const col = document.querySelector('select[name="col"]').value;
+    if (action === 'drop_col') {
+      if (!confirm(`Drop the entire column "${col}"? This cannot be undone.`)) e.preventDefault();
+    } else if (action === 'drop_nulls_col') {
+      if (!confirm(`Drop all rows where "${col}" is null?`)) e.preventDefault();
+    }
+  });
+
+  function confirmAction(form, msg) {
+    if (confirm(msg)) form.submit();
+  }
+</script>
+{% endblock %}

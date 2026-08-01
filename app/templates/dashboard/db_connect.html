@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% block title %}DB Connector{% endblock %}
+{% block page_title %}DATABASE CONNECTOR{% endblock %}
+{% block content %}
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="section-card p-4 reveal h-100">
+      <div class="d-flex align-items-center gap-2 mb-4">
+        <div style="width:36px;height:36px;background:#fff7ed;border-radius:9px;display:flex;align-items:center;justify-content:center;color:#f97316">
+          <i class="bi bi-plug-fill"></i>
+        </div>
+        <div>
+          <div class="fw-bold">Connect to Database</div>
+          <div class="text-muted" style="font-size:.72rem">Explore and process data like a dataset</div>
+        </div>
+      </div>
+
+      <form method="POST" class="d-flex flex-column gap-3">
+        <div>
+          <label class="form-label fw-semibold small">Database Type</label>
+          <select name="db_type" class="form-select form-select-sm">
+            <option value="postgresql" {{ 'selected' if conn.db_type == 'postgresql' }}>PostgreSQL</option>
+            <option value="mysql" {{ 'selected' if conn.db_type == 'mysql' }}>MySQL</option>
+          </select>
+        </div>
+        <div class="row g-2">
+          <div class="col-8">
+            <label class="form-label fw-semibold small">Host</label>
+            <input type="text" name="host" class="form-control form-control-sm" value="{{ conn.host }}" placeholder="127.0.0.1">
+          </div>
+          <div class="col-4">
+            <label class="form-label fw-semibold small">Port</label>
+            <input type="text" name="port" class="form-control form-control-sm" value="{{ conn.port }}" placeholder="5432">
+          </div>
+        </div>
+        <div>
+          <label class="form-label fw-semibold small">Database Name</label>
+          <input type="text" name="dbname" class="form-control form-control-sm" value="{{ conn.dbname }}" placeholder="my_database">
+        </div>
+        <div>
+          <label class="form-label fw-semibold small">Username</label>
+          <input type="text" name="username" class="form-control form-control-sm" value="{{ conn.username }}" placeholder="postgres">
+        </div>
+        <div>
+          <label class="form-label fw-semibold small">Password</label>
+          <input type="password" name="password" class="form-control form-control-sm"
+                 placeholder="leave blank to use server default"
+                 autocomplete="current-password">
+          <input type="hidden" name="password_default" value="{{ conn.password }}">
+        </div>
+        <div>
+          <label class="form-label fw-semibold small">SQL Query</label>
+          <textarea name="query" class="form-control form-control-sm font-monospace" rows="5" placeholder="SELECT * FROM table_name LIMIT 100;">{{ conn.query }}</textarea>
+        </div>
+        <div>
+          <label class="form-label fw-semibold small">Natural Language Query</label>
+          <textarea name="nlq_query" class="form-control form-control-sm" rows="3" placeholder="Show top 5 regions by sales">{{ form.get('nlq_query','') }}</textarea>
+        </div>
+        <div class="row g-2">
+          <div class="col-8">
+            <label class="form-label fw-semibold small">Dataset Name</label>
+            <input type="text" name="name" class="form-control form-control-sm" value="{{ form.get('name','') }}" placeholder="Exported dataset name">
+          </div>
+          <div class="col-4">
+            <label class="form-label fw-semibold small">Visibility</label>
+            <select name="visibility" class="form-select form-select-sm">
+              <option value="private" {{ 'selected' if form.get('visibility','private') == 'private' }}>Private</option>
+              <option value="public" {{ 'selected' if form.get('visibility') == 'public' }}>Public</option>
+            </select>
+          </div>
+        </div>
+        <div class="section-card p-3" style="background:#fafaf9;border:1px solid #f0ede8">
+          <div class="fw-bold small mb-3">Chart Builder</div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Chart Type</label>
+              <select name="chart_type" class="form-select form-select-sm">
+                {% for kind in ['bar', 'line', 'scatter', 'histogram', 'box', 'violin', 'area', 'pie', 'funnel', 'heatmap'] %}
+                <option value="{{ kind }}" {{ 'selected' if form.get('chart_type','bar') == kind }}>{{ kind | title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold small">Chart Title</label>
+              <input type="text" name="chart_title" class="form-control form-control-sm" value="{{ form.get('chart_title','') }}" placeholder="Sales by Region">
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-semibold small">X Axis</label>
+              {% if columns %}
+              <select name="x_col" class="form-select form-select-sm">
+                <option value="">Select</option>
+                {% for col in columns %}<option value="{{ col }}" {{ 'selected' if form.get('x_col') == col }}>{{ col }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input type="text" name="x_col" class="form-control form-control-sm" value="{{ form.get('x_col','') }}" placeholder="column name">
+              {% endif %}
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-semibold small">Y Axis</label>
+              {% if numeric_cols %}
+              <select name="y_col" class="form-select form-select-sm">
+                <option value="">None</option>
+                {% for col in numeric_cols %}<option value="{{ col }}" {{ 'selected' if form.get('y_col') == col }}>{{ col }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input type="text" name="y_col" class="form-control form-control-sm" value="{{ form.get('y_col','') }}" placeholder="numeric column">
+              {% endif %}
+            </div>
+            <div class="col-4">
+              <label class="form-label fw-semibold small">Color By</label>
+              {% if cat_cols %}
+              <select name="color_col" class="form-select form-select-sm">
+                <option value="">None</option>
+                {% for col in cat_cols %}<option value="{{ col }}" {{ 'selected' if form.get('color_col') == col }}>{{ col }}</option>{% endfor %}
+              </select>
+              {% else %}
+              <input type="text" name="color_col" class="form-control form-control-sm" value="{{ form.get('color_col','') }}" placeholder="category column (optional)">
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="d-grid gap-2">
+          <button type="submit" class="btn btn-accent">
+            <i class="bi bi-grid-3x3-gap-fill me-1"></i>Explore Data
+          </button>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-sm btn-outline-primary flex-fill" formaction="{{ url_for('dashboard.db_connect_analytics') }}">
+              <i class="bi bi-graph-up me-1"></i>Analytics
+            </button>
+            <button type="submit" class="btn btn-sm btn-outline-warning flex-fill" formaction="{{ url_for('dashboard.db_connect_quality') }}">
+              <i class="bi bi-shield-check me-1"></i>Quality
+            </button>
+          </div>
+          <div class="d-flex gap-2 flex-wrap">
+            <button type="submit" class="btn btn-sm btn-outline-secondary flex-fill" formaction="{{ url_for('dashboard.db_connect_nlq') }}">
+              <i class="bi bi-chat-dots me-1"></i>Ask NLQ
+            </button>
+            <button type="submit" class="btn btn-sm btn-outline-success flex-fill" formaction="{{ url_for('dashboard.db_connect_chart') }}">
+              <i class="bi bi-bar-chart me-1"></i>Build Chart
+            </button>
+          </div>
+          <button type="submit" class="btn btn-sm btn-outline-info" formaction="{{ url_for('data.export_from_db') }}">
+            <i class="bi bi-download me-1"></i>Save as Dataset
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    {% if error %}
+    <div class="alert alert-danger d-flex gap-2 align-items-start reveal">
+      <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+      <div><strong>Connection / Query Error</strong><br><code style="font-size:.8rem">{{ error }}</code></div>
+    </div>
+    {% endif %}
+
+    <div class="section-card overflow-hidden reveal mb-4">
+      {% set tab = active_tab or 'explorer' %}
+      <ul class="nav nav-tabs px-4 pt-3" style="border-bottom:1px solid #f0ede8">
+        <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'explorer' }}" data-bs-toggle="tab" href="#explorer"><i class="bi bi-grid me-1"></i>Explorer</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'analytics' }}" data-bs-toggle="tab" href="#analytics"><i class="bi bi-graph-up me-1"></i>Analytics</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'quality' }}" data-bs-toggle="tab" href="#quality"><i class="bi bi-shield-check me-1"></i>Quality</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'nlq' }}" data-bs-toggle="tab" href="#nlq"><i class="bi bi-chat-dots me-1"></i>NLQ</a></li>
+        <li class="nav-item"><a class="nav-link {{ 'active' if tab == 'chart' }}" data-bs-toggle="tab" href="#chart"><i class="bi bi-bar-chart me-1"></i>Chart</a></li>
+      </ul>
+
+      <div class="tab-content p-4">
+        <div class="tab-pane fade {{ 'show active' if tab == 'explorer' }}" id="explorer">
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ summary.shape[0] if summary else '—' }}</div><div class="text-muted" style="font-size:.72rem">Rows</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ summary.shape[1] if summary else '—' }}</div><div class="text-muted" style="font-size:.72rem">Columns</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ summary.numeric_cols|length if summary else '—' }}</div><div class="text-muted" style="font-size:.72rem">Numeric</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ summary.cat_cols|length if summary else '—' }}</div><div class="text-muted" style="font-size:.72rem">Categorical</div></div></div>
+          </div>
+
+          {% if summary %}
+          <div class="row g-4">
+            <div class="col-12">
+              <div class="table-responsive">{{ summary.head | safe }}</div>
+            </div>
+            {% if chart_json %}
+            <div class="col-12">
+              <div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-chart" style="height:300px"></div></div>
+            </div>
+            {% endif %}
+            <div class="col-lg-7"><div class="table-responsive">{{ summary.describe | safe }}</div></div>
+            <div class="col-lg-5">
+              <div class="section-card p-3 h-100" style="background:#fafaf9">
+                <div class="fw-bold small mb-3">Missing Values</div>
+                {% if summary.total_nulls == 0 %}
+                <div class="text-center py-4">
+                  <div style="width:56px;height:56px;background:#f0fdf4;border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.6rem;color:#16a34a"><i class="bi bi-check-circle"></i></div>
+                  <div class="fw-semibold">No missing values</div>
+                  <div class="text-muted small">The connected dataset is complete.</div>
+                </div>
+                {% else %}
+                <div class="d-grid gap-2">
+                  {% for item in summary.null_info %}
+                  <div class="p-2 rounded-3" style="background:#fff;border:1px solid #f0ede8">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                      <span class="small fw-semibold text-truncate me-2" title="{{ item.col }}">{{ item.col }}</span>
+                      <span class="badge bg-danger" style="font-size:.62rem">{{ item.count }}</span>
+                    </div>
+                    <div class="progress" style="height:4px;background:#f0ede8"><div class="progress-bar bg-danger" style="width:{{ item.pct }}%"></div></div>
+                    <div class="text-muted mt-1" style="font-size:.68rem">{{ item.pct }}% missing</div>
+                  </div>
+                  {% endfor %}
+                </div>
+                {% endif %}
+                {% if summary.duplicates > 0 %}
+                <div class="alert alert-warning mt-3 py-2 mb-0 d-flex align-items-center gap-2">
+                  <i class="bi bi-copy"></i>
+                  <span>{{ summary.duplicates }} duplicate rows detected. Use Quality or Clean to inspect them.</span>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          {% else %}
+          <div class="p-5 text-center">
+            <div style="width:64px;height:64px;background:#fff7ed;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.8rem;color:#f97316"><i class="bi bi-database"></i></div>
+            <div class="fw-semibold mb-1">No data loaded yet</div>
+            <div class="text-muted small">Connect to a database and run Explore Data to inspect the result set.</div>
+          </div>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane fade {{ 'show active' if tab == 'analytics' }}" id="analytics">
+          {% if corr_json or dist_charts or cat_charts or trend_json or kpis %}
+          <div class="row g-4 mb-4">
+            {% if kpis %}
+            <div class="col-12">
+              <div class="section-card p-3" style="background:#fafaf9">
+                <div class="fw-bold small mb-3">Column KPIs</div>
+                <div class="row g-2">
+                  {% for k in kpis %}
+                  <div class="col-md-4 col-lg-2">
+                    <div class="p-2 rounded-3" style="background:#fff;border:1px solid #f0ede8">
+                      <div class="fw-semibold small text-truncate" title="{{ k.label }}">{{ k.label }}</div>
+                      <div class="text-muted" style="font-size:.68rem">Mean {{ k.mean }} | Std {{ k.std }}</div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            {% endif %}
+            {% if corr_json %}
+            <div class="col-lg-7"><div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-corr" style="height:360px"></div></div></div>
+            {% endif %}
+            {% if trend_json %}
+            <div class="col-lg-5"><div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-trend" style="height:360px"></div></div></div>
+            {% endif %}
+          </div>
+          <div class="row g-3">
+            {% for c in dist_charts %}
+            <div class="col-md-6"><div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-dist-{{ loop.index }}" style="height:280px"></div></div></div>
+            {% endfor %}
+            {% for c in cat_charts %}
+            <div class="col-md-4"><div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-cat-{{ loop.index }}" style="height:280px"></div></div></div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="p-5 text-center text-muted small">Run Analytics to generate KPI cards, distributions, correlations, and trends from the connected database.</div>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane fade {{ 'show active' if tab == 'quality' }}" id="quality">
+          {% if score is not none %}
+          <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1" style="color:{{ color }}">{{ score }}</div><div class="text-muted" style="font-size:.72rem">Score</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ grade }}</div><div class="text-muted" style="font-size:.72rem">Grade</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ null_pct }}</div><div class="text-muted" style="font-size:.72rem">Null %</div></div></div>
+            <div class="col-6 col-md-3"><div class="stat-card p-3 h-100"><div class="fw-bold fs-4 lh-1">{{ outlier_pct }}</div><div class="text-muted" style="font-size:.72rem">Outlier %</div></div></div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+              <thead><tr><th>Column</th><th>Type</th><th>Nulls</th><th>Unique</th><th>Score</th></tr></thead>
+              <tbody>
+                {% for p in col_profiles %}
+                <tr>
+                  <td class="small fw-semibold">{{ p.name }}</td>
+                  <td class="small">{{ p.dtype }}</td>
+                  <td class="small">{{ p.nulls }}</td>
+                  <td class="small">{{ p.unique }}</td>
+                  <td class="small">{{ p.score }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <div class="p-5 text-center text-muted small">Run Quality to inspect missing values, duplicates, and outlier profiles for the connected query result.</div>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane fade {{ 'show active' if tab == 'nlq' }}" id="nlq">
+          {% if result_nlq %}
+          <div class="section-card p-3 mb-3" style="background:#fafaf9">
+            <div class="fw-bold small mb-1">Query</div>
+            <div class="text-muted small">{{ result_nlq.query }}</div>
+          </div>
+          {% if result_nlq.answer %}
+          <div class="alert alert-info">{{ result_nlq.answer | safe }}</div>
+          {% endif %}
+          {% if result_nlq.chart %}
+          <div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-nlq-chart" style="height:320px"></div></div>
+          {% endif %}
+          {% else %}
+          <div class="p-5 text-center text-muted small">Run NLQ to ask questions like top values, averages, trends, correlations, and outliers over the connected data.</div>
+          {% endif %}
+        </div>
+
+        <div class="tab-pane fade {{ 'show active' if tab == 'chart' }}" id="chart">
+          {% if built_chart %}
+          <div class="section-card p-3 mb-3" style="background:#fafaf9">
+            <div class="fw-bold small mb-1">Saved Chart</div>
+            <div class="text-muted small">{{ built_chart.title }}</div>
+          </div>
+          <div class="rounded-3 overflow-hidden" style="background:#1c1917"><div id="db-built-chart" style="height:320px"></div></div>
+          {% else %}
+          <div class="p-5 text-center text-muted small">Use Build Chart to create a saved visualization from the connected query result.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if not summary and not result_nlq and not built_chart and not error %}
+    <div class="section-card p-5 text-center reveal">
+      <div style="width:64px;height:64px;background:#fff7ed;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.8rem;color:#f97316">
+        <i class="bi bi-database"></i>
+      </div>
+      <div class="fw-semibold mb-1">No query run yet</div>
+      <div class="text-muted small">Fill in connection details and choose Explore, Analytics, Quality, NLQ, or Chart.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+  const cfg = {responsive: true, displayModeBar: false};
+  {% if chart_json %}
+  const d = {{ chart_json | safe }};
+  Plotly.newPlot('db-chart', d.data, d.layout, cfg);
+  {% endif %}
+  {% if corr_json %}Plotly.newPlot('db-corr', {{ corr_json | safe }}.data, {{ corr_json | safe }}.layout, cfg);{% endif %}
+  {% if trend_json %}Plotly.newPlot('db-trend', {{ trend_json | safe }}.data, {{ trend_json | safe }}.layout, cfg);{% endif %}
+  {% for c in dist_charts %}Plotly.newPlot('db-dist-{{ loop.index }}', {{ c.json | safe }}.data, {{ c.json | safe }}.layout, cfg);{% endfor %}
+  {% for c in cat_charts %}Plotly.newPlot('db-cat-{{ loop.index }}', {{ c.json | safe }}.data, {{ c.json | safe }}.layout, cfg);{% endfor %}
+  {% if result_nlq and result_nlq.chart %}Plotly.newPlot('db-nlq-chart', {{ result_nlq.chart | safe }}.data, {{ result_nlq.chart | safe }}.layout, cfg);{% endif %}
+  {% if built_chart %}Plotly.newPlot('db-built-chart', {{ built_chart.json | safe }}.data, {{ built_chart.json | safe }}.layout, cfg);{% endif %}
+</script>
+{% endblock %}

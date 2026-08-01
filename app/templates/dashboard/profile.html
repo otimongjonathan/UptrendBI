@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Profile{% endblock %}
+{% block page_title %}MY PROFILE{% endblock %}
+{% block content %}
+
+<div class="row g-4 justify-content-center">
+
+  <!-- Avatar card -->
+  <div class="col-md-4 col-lg-3">
+    <div class="section-card p-4 text-center h-100">
+      <div style="width:88px;height:88px;border-radius:50%;background:linear-gradient(135deg,#f97316,#ea6c0a);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:2.2rem;color:#fff;font-weight:700;box-shadow:0 4px 20px rgba(249,115,22,.35)">
+        {{ current_user.username[0].upper() }}
+      </div>
+      <h5 class="fw-bold mb-1">{{ current_user.username }}</h5>
+      <div class="text-muted small mb-3">{{ current_user.email }}</div>
+      <span class="badge px-3 py-2 rounded-pill" style="background:#fff7ed;color:#f97316;font-size:.78rem">
+        <i class="bi bi-shield-check me-1"></i>{{ current_user.role | capitalize }}
+      </span>
+      <hr style="border-color:var(--border-color);margin:1.25rem 0">
+      <div class="text-muted small d-flex align-items-center justify-content-center gap-1">
+        <i class="bi bi-calendar3"></i> Member since {{ current_user.created_at.strftime('%B %Y') }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Forms -->
+  <div class="col-md-8 col-lg-6">
+
+    <!-- Update profile info -->
+    <div class="section-card p-4 mb-4">
+      <h6 class="fw-bold mb-4"><i class="bi bi-person-fill me-2" style="color:#f97316"></i>Profile Information</h6>
+      <form method="POST">
+        <input type="hidden" name="action" value="update_info">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Username</label>
+          <input type="text" name="username" class="form-control" value="{{ current_user.username }}" required>
+        </div>
+        <div class="mb-4">
+          <label class="form-label small fw-semibold">Email Address</label>
+          <input type="email" name="email" class="form-control" value="{{ current_user.email }}" required>
+        </div>
+        <button type="submit" class="btn btn-sm px-4 fw-semibold" style="background:linear-gradient(135deg,#f97316,#ea6c0a);color:#fff;border:none">
+          <i class="bi bi-check2 me-1"></i>Save Changes
+        </button>
+      </form>
+    </div>
+
+    <!-- Change password -->
+    <div class="section-card p-4">
+      <h6 class="fw-bold mb-4"><i class="bi bi-lock-fill me-2" style="color:#f97316"></i>Change Password</h6>
+      <form method="POST">
+        <input type="hidden" name="action" value="change_password">
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Current Password</label>
+          <input type="password" name="current_password" class="form-control" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">New Password</label>
+          <input type="password" name="new_password" class="form-control" required minlength="6">
+        </div>
+        <div class="mb-4">
+          <label class="form-label small fw-semibold">Confirm New Password</label>
+          <input type="password" name="confirm_password" class="form-control" required minlength="6">
+        </div>
+        <button type="submit" class="btn btn-sm px-4 fw-semibold" style="background:linear-gradient(135deg,#f97316,#ea6c0a);color:#fff;border:none">
+          <i class="bi bi-key me-1"></i>Update Password
+        </button>
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

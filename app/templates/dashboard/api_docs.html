@@ -1,0 +1,194 @@
+{% extends 'base.html' %}
+{% block title %}JSON API{% endblock %}
+{% block page_title %}JSON API{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-center justify-content-between mb-4 reveal">
+    <div>
+        <h5 class="fw-800 mb-0" style="font-size:1.1rem">JSON API Reference</h5>
+        <div class="text-muted" style="font-size:.8rem">Programmatic access to your dataset statistics</div>
+    </div>
+    <span class="badge rounded-pill" style="background:rgba(249,115,22,.12);color:#f97316;font-size:.75rem;padding:.4rem .9rem;border:1px solid rgba(249,115,22,.2)">
+        <i class="bi bi-lock me-1"></i>Login required
+    </span>
+</div>
+
+<div class="row g-4">
+
+    <!-- Left: endpoint docs -->
+    <div class="col-lg-7">
+
+        <!-- Base URL -->
+        <div class="section-card p-4 mb-3 reveal">
+            <div class="fw-700 mb-2" style="font-size:.8rem;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e">Base URL</div>
+            <code style="background:#0f0f1a;color:#fb923c;padding:.6rem 1rem;border-radius:9px;display:block;font-size:.85rem">
+                {{ request.host_url.rstrip('/') }}
+            </code>
+        </div>
+
+        <!-- Endpoint card -->
+        <div class="section-card p-4 mb-3 reveal">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <span class="badge" style="background:#22c55e;color:#fff;font-size:.72rem;border-radius:6px;padding:.3rem .6rem">GET</span>
+                <code style="font-size:.88rem;color:#1c1917">/api/dataset/&lt;id&gt;/stats</code>
+            </div>
+            <p style="font-size:.83rem;color:#57534e;margin-bottom:1rem">
+                Returns descriptive statistics for all numeric columns in the specified dataset.
+                The dataset must belong to the authenticated user's session.
+            </p>
+
+            <!-- Parameters -->
+            <div class="fw-700 mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e">Path Parameter</div>
+            <table class="table table-sm mb-3" style="font-size:.8rem">
+                <thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead>
+                <tbody>
+                    <tr><td><code>id</code></td><td><span style="color:#8b5cf6">integer</span></td><td>Dataset ID (visible in the URL when viewing a dataset)</td></tr>
+                </tbody>
+            </table>
+
+            <!-- Response schema -->
+            <div class="fw-700 mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e">Response Schema</div>
+            <pre style="background:#0f0f1a;color:#e0e0e0;border-radius:10px;padding:1rem;font-size:.78rem;overflow-x:auto;margin:0">{
+  "dataset": "string",
+  "rows":    integer,
+  "columns": integer,
+  "stats": {
+    "&lt;column_name&gt;": {
+      "mean":   float,
+      "median": float,
+      "std":    float,
+      "min":    float,
+      "max":    float,
+      "nulls":  integer
+    }
+  }
+}</pre>
+        </div>
+
+        <!-- Example response -->
+        <div class="section-card p-4 reveal">
+            <div class="fw-700 mb-2" style="font-size:.75rem;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e">Example Response</div>
+            <pre style="background:#0f0f1a;color:#e0e0e0;border-radius:10px;padding:1rem;font-size:.78rem;overflow-x:auto;margin:0"><span style="color:#fb923c">{</span>
+  <span style="color:#86efac">"dataset"</span>: <span style="color:#fde68a">"Customer Churn"</span>,
+  <span style="color:#86efac">"rows"</span>:    <span style="color:#93c5fd">7043</span>,
+  <span style="color:#86efac">"columns"</span>: <span style="color:#93c5fd">21</span>,
+  <span style="color:#86efac">"stats"</span>: <span style="color:#fb923c">{</span>
+    <span style="color:#86efac">"tenure"</span>: <span style="color:#fb923c">{</span>
+      <span style="color:#86efac">"mean"</span>:   <span style="color:#93c5fd">32.3711</span>,
+      <span style="color:#86efac">"median"</span>: <span style="color:#93c5fd">29.0</span>,
+      <span style="color:#86efac">"std"</span>:    <span style="color:#93c5fd">24.5595</span>,
+      <span style="color:#86efac">"min"</span>:    <span style="color:#93c5fd">0.0</span>,
+      <span style="color:#86efac">"max"</span>:    <span style="color:#93c5fd">72.0</span>,
+      <span style="color:#86efac">"nulls"</span>:  <span style="color:#93c5fd">0</span>
+    <span style="color:#fb923c">}</span>
+  <span style="color:#fb923c">}</span>
+<span style="color:#fb923c">}</span></pre>
+        </div>
+    </div>
+
+    <!-- Right: Try it live -->
+    <div class="col-lg-5">
+        <div class="section-card p-4 reveal" style="position:sticky;top:80px">
+            <div class="fw-700 mb-3" style="font-size:.85rem">
+                <i class="bi bi-play-circle me-2" style="color:#f97316"></i>Try It Live
+            </div>
+
+            {% if datasets %}
+            <div class="mb-3">
+                <label class="form-label" style="font-size:.78rem;font-weight:600">Select Dataset</label>
+                <select id="dsSelect" class="form-select" style="border-radius:9px;font-size:.83rem">
+                    {% for ds in datasets %}
+                    <option value="{{ ds.id }}">{{ ds.name }} (id={{ ds.id }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label" style="font-size:.78rem;font-weight:600">Request URL</label>
+                <div class="d-flex gap-2">
+                    <input id="reqUrl" type="text" class="form-control" readonly
+                           style="border-radius:9px;font-size:.75rem;background:#f9fafb;color:#57534e">
+                    <button class="btn btn-sm" id="copyBtn"
+                            style="border-radius:9px;background:rgba(249,115,22,.1);color:#f97316;border:1px solid rgba(249,115,22,.2);white-space:nowrap;font-size:.75rem">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button id="sendBtn" class="btn btn-accent w-100 mb-3" style="border-radius:9px;font-size:.83rem">
+                <i class="bi bi-send me-2"></i>Send Request
+            </button>
+
+            <div id="responseWrap" style="display:none">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <span style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:#a8a29e">Response</span>
+                    <span id="statusBadge" class="badge" style="font-size:.68rem"></span>
+                </div>
+                <pre id="responseBox" style="background:#0f0f1a;color:#e0e0e0;border-radius:10px;padding:1rem;font-size:.72rem;max-height:340px;overflow-y:auto;margin:0;white-space:pre-wrap;word-break:break-all"></pre>
+            </div>
+
+            {% else %}
+            <div class="text-center py-4" style="color:#a8a29e;font-size:.83rem">
+                <i class="bi bi-table d-block mb-2" style="font-size:2rem"></i>
+                Upload a dataset first to try the API.
+                <div class="mt-2">
+                    <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-sm btn-accent" style="border-radius:8px">Upload Now</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const base    = '{{ request.host_url.rstrip("/") }}';
+const select  = document.getElementById('dsSelect');
+const reqUrl  = document.getElementById('reqUrl');
+const sendBtn = document.getElementById('sendBtn');
+const copyBtn = document.getElementById('copyBtn');
+const resWrap = document.getElementById('responseWrap');
+const resBox  = document.getElementById('responseBox');
+const statusB = document.getElementById('statusBadge');
+
+function buildUrl() {
+    return select ? `${base}/api/dataset/${select.value}/stats` : '';
+}
+
+function updateUrl() { if (reqUrl) reqUrl.value = buildUrl(); }
+
+if (select) { select.addEventListener('change', updateUrl); updateUrl(); }
+
+if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(reqUrl.value);
+        copyBtn.innerHTML = '<i class="bi bi-check2"></i>';
+        setTimeout(() => copyBtn.innerHTML = '<i class="bi bi-clipboard"></i>', 1500);
+    });
+}
+
+if (sendBtn) {
+    sendBtn.addEventListener('click', async () => {
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Fetching…';
+        resWrap.style.display = 'none';
+        try {
+            const res  = await fetch(buildUrl());
+            const data = await res.json();
+            resBox.textContent = JSON.stringify(data, null, 2);
+            statusB.textContent = res.status + ' ' + res.statusText;
+            statusB.style.background = res.ok ? 'rgba(34,197,94,.15)' : 'rgba(239,68,68,.15)';
+            statusB.style.color      = res.ok ? '#16a34a' : '#dc2626';
+            resWrap.style.display = 'block';
+        } catch(e) {
+            resBox.textContent = 'Error: ' + e.message;
+            resWrap.style.display = 'block';
+        }
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = '<i class="bi bi-send me-2"></i>Send Request';
+    });
+}
+</script>
+{% endblock %}

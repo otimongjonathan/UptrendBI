@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{% block title %}Datasets{% endblock %}
+{% block page_title %}Datasets{% endblock %}
+{% block content %}
+
+<div class="d-flex align-items-center justify-content-between mb-4 reveal">
+  <div>
+    <h4 class="fw-bold mb-1">My Datasets</h4>
+    <p class="text-muted mb-0" style="font-size:.875rem">{{ datasets|length }} dataset{{ 's' if datasets|length != 1 }} in your workspace.</p>
+  </div>
+  <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-accent d-flex align-items-center gap-2">
+    <i class="bi bi-cloud-upload"></i> Upload Dataset
+  </a>
+</div>
+
+<div class="section-card reveal">
+  {% if datasets %}
+  <div class="table-responsive">
+    <table class="table table-hover mb-0">
+      <thead>
+        <tr>
+          <th class="ps-4">Dataset</th>
+          <th>Rows</th>
+          <th>Columns</th>
+          <th>Visibility</th>
+          <th>Quality</th>
+          <th>Uploaded</th>
+          <th class="pe-4">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ds in datasets %}
+        <tr>
+          <td class="ps-4">
+            <div class="d-flex align-items-center gap-3">
+              <div class="icon-wrap" style="width:34px;height:34px;background:#fff7ed;flex-shrink:0">
+                <i class="bi bi-file-earmark-spreadsheet" style="color:#f97316;font-size:.9rem"></i>
+              </div>
+              <div>
+                <div class="fw-semibold" style="font-size:.875rem">{{ ds.name }}</div>
+                <div class="text-muted" style="font-size:.72rem">{{ ds.filename }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="fw-semibold" style="font-size:.875rem">{{ "{:,}".format(ds.rows) }}</span></td>
+          <td><span class="badge rounded-pill" style="background:#f0f9ff;color:#0284c7;font-weight:600;font-size:.72rem">{{ ds.columns }} cols</span></td>
+          <td>
+            <form method="POST" action="{{ url_for('dashboard.toggle_visibility', dataset_id=ds.id) }}" class="d-inline">
+              {% if ds.is_public %}
+              <button type="submit" class="btn btn-sm" style="background:rgba(34,197,94,.1);color:#16a34a;border:1px solid rgba(34,197,94,.25);border-radius:99px;font-size:.7rem;padding:.2rem .7rem" title="Click to make private">
+                <i class="bi bi-globe2 me-1"></i>Public
+              </button>
+              {% else %}
+              <button type="submit" class="btn btn-sm" style="background:rgba(107,114,128,.1);color:#6b7280;border:1px solid rgba(107,114,128,.25);border-radius:99px;font-size:.7rem;padding:.2rem .7rem" title="Click to make public">
+                <i class="bi bi-lock me-1"></i>Private
+              </button>
+              {% endif %}
+            </form>
+          </td>
+          <td>
+            <a href="{{ url_for('dashboard.data_quality', dataset_id=ds.id) }}" class="text-decoration-none d-flex align-items-center gap-2">
+              <div style="width:32px;height:32px;position:relative">
+                <svg width="32" height="32" style="transform:rotate(-90deg)">
+                  <circle cx="16" cy="16" r="12" fill="none" stroke="#f3f4f6" stroke-width="3"/>
+                  <circle cx="16" cy="16" r="12" fill="none" stroke="#f97316" stroke-width="3"
+                          stroke-dasharray="75.4 75.4" stroke-linecap="round"/>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.55rem;font-weight:800;color:#f97316">?</div>
+              </div>
+              <span style="font-size:.72rem;color:#f97316;font-weight:600">View</span>
+            </a>
+          </td>
+          <td><span class="text-muted" style="font-size:.8rem">{{ ds.uploaded_at.strftime('%d %b %Y') }}</span></td>
+          <td class="pe-4">
+            <div class="d-flex gap-1 flex-wrap">
+              <a href="{{ url_for('dashboard.view_dataset', dataset_id=ds.id) }}" class="btn btn-sm btn-outline-secondary" title="Explore"><i class="bi bi-eye"></i></a>
+              <a href="{{ url_for('dashboard.nlq', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#0f0f1a;color:#fff;border:none" title="Ask AI"><i class="bi bi-chat-dots-fill"></i></a>
+              <a href="{{ url_for('dashboard.data_story', dataset_id=ds.id) }}" class="btn btn-sm btn-outline-secondary" title="Story"><i class="bi bi-journal-richtext"></i></a>
+              <a href="{{ url_for('dashboard.analytics', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0" title="Analytics"><i class="bi bi-graph-up"></i></a>
+              <a href="{{ url_for('dashboard.clean_dataset', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#fef9c3;color:#ca8a04;border:1px solid #fde68a" title="Clean"><i class="bi bi-magic"></i></a>
+              <a href="{{ url_for('dashboard.download_dataset', dataset_id=ds.id) }}" class="btn btn-sm" style="background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd" title="Download"><i class="bi bi-download"></i></a>
+              <form method="POST" action="{{ url_for('data.delete', dataset_id=ds.id) }}" class="d-inline" onsubmit="return confirm('Delete {{ ds.name }}?')">
+                <button class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="text-center py-5">
+    <div class="icon-wrap mx-auto mb-3" style="width:64px;height:64px;background:#fff7ed;border-radius:18px">
+      <i class="bi bi-inbox" style="color:#f97316;font-size:1.8rem"></i>
+    </div>
+    <div class="fw-semibold mb-1">No datasets yet</div>
+    <div class="text-muted small mb-3">Upload a CSV file to get started</div>
+    <a href="{{ url_for('dashboard.upload_page') }}" class="btn btn-accent btn-sm">
+      <i class="bi bi-upload me-1"></i>Upload your first dataset
+    </a>
+  </div>
+  {% endif %}
+</div>
+
+{% endblock %}
+{% block scripts %}{% endblock %}
