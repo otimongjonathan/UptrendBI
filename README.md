@@ -1,8 +1,8 @@
-# Business Intelligence Platform
+# uptrend Business Intelligence Platform
 
 ## Overview
 
-This project is a web-based Business Intelligence Platform developed using Flask. The application allows users to upload CSV datasets, assess data quality, perform data analysis, generate interactive visualizations, and produce reports that support business decision-making.
+This project is a web-based Business Intelligence website developed using Flask. The application allows users to upload CSV datasets, assess data quality, perform data analysis, generate interactive visualizations, and produce reports that support business decision-making.
 
 ## Features
 
@@ -20,9 +20,7 @@ This project is a web-based Business Intelligence Platform developed using Flask
 - Python
 - Flask
 - PostgreSQL
-- SQLAlchemy
-- Pandas
-- Plotly
+- Git
 - Bootstrap
 - HTML, CSS, and JavaScript
 
@@ -36,7 +34,7 @@ Before running the application, ensure the following software is installed:
 - PostgreSQL
 - Git
 - pip (Python package manager)
-- Virtual Environment (venv)
+- Virtual Environment (.venv)
 
 ---
 
@@ -85,7 +83,7 @@ Windows
 Linux / macOS
 
 ```bash
-source venv/bin/activate
+source .venv/bin/activate
 ```
 
 After activation, the terminal should display the virtual environment name.
@@ -105,8 +103,7 @@ pip install -r requirements.txt
 ## Step 5: Create the PostgreSQL Database
 
 1. Open PostgreSQL.
-2. Create a new database.
-3. Give the database a name (for example: `business_intelligence`).
+2. Create a new database called uptrendBI
 
 ---
 
@@ -153,13 +150,6 @@ flask db upgrade
 ## Step 8: Run the Application
 
 Start the Flask server:
-
-```bash
-python run.py
-```
-
-or
-
 ```bash
 flask run
 ```
